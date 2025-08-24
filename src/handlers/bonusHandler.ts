@@ -29,7 +29,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
                 results: userProgress.results.filter(n => n.note.index !== index)
             });
 
-            let partToShow = removeBonusValue(removeSpoilers(userProgress.parts[index] || ""));
+            let partToShow = "[10] " + removeBonusValue(removeSpoilers(userProgress.parts[index] || ""));
             if (index === 0) {
                 partToShow = removeBonusValue(removeSpoilers(userProgress.leadin || "")) + "\n" + partToShow;
             }
