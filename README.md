@@ -17,13 +17,19 @@ These instructions for users have been split based on whether you are a manager 
 
 ### Instructions for Bot Managers
 
+A list of available instances of the Playtesting Bot, as of September 2025:
+
+* [Botero](https://en.wikipedia.org/wiki/Fernando_Botero)
+  * The official ACF Playtesting Bot, created by [Ani Perumalla](https://github.com/ani-per/playtesting-bot) and run by the [ACF Webmaster](https://acf-quizbowl.com/members/#officers).
+  * Use [this invite link](https://discord.com/api/oauth2/authorize?client_id=1311780100123131914&permissions=67584&scope=bot) to add Botero to your server.
+* [Botticelli](https://en.wikipedia.org/wiki/Sandro_Botticelli)
+  * [Jordan Brownstein's original instance of the Playtesting Bot.](https://github.com/JemCasey/playtesting-bot) It is reliable, but lacks some of the newer features (e.g. bulk playtesting, category roles).
+  * Use [this invite link](https://discord.com/api/oauth2/authorize?client_id=1128432579436101724&permissions=67584&scope=bot) to add Botticelli to your server.
+
+> [!NOTE]
+> If you want to host your own instance of the bot instead of relying on an existing instance, you can follow the steps under [Instruction for Developers](#instructions-for-developers) to set up your own instance.
+
 #### Configuration
-
-Use [this invite link](https://discord.com/api/oauth2/authorize?client_id=1128432579436101724&permissions=67584&scope=bot) to add the default instance of the bot (**Botticelli**) to your server.
-Note: This is Jordan Brownstein's version of the bot, **not** this fork.
-
-> [!IMPORTANT]
-> Botticelli is **in alpha and 24/7 availability is not guaranteed**. If this is a concern for your project, you can follow the steps under [Instruction for Developers](#instructions-for-developers) to set up your own instance.
 
 > [!TIP]
 > It is strongly recommended that you use the [ACF Production Server Template](https://discord.new/ps5S8Bsxwfra) [^1] for your production/playtesting server. The bot has been extensively tested in that framework, and using it will save you the significant amount of time necessary to set up all the necessary roles, permissions, and channels.
@@ -187,6 +193,9 @@ As [mentioned above](#configuration), there is already an instance of the bot th
 * Follow the steps in [Instructions for Users](#instructions-for-users) to configure and use the bot.
 
 ### Troubleshooting
+
+> [!WARNING]
+> Avoid having multiple bot instances in the same server whenever possible, as bots may clash with each other and hence produce duplicate threads, reacts, etc.
 
 #### Timeout Warning/Error
 
