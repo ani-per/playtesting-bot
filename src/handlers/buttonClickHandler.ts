@@ -44,7 +44,8 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                 } as UserBonusProgress);
 
                 await interaction.user.send(getEmbeddedMessage("Here's your bonus! Type `d`/`direct` to check your the answer to the current part, `p`/`pass` if you don't have a guess, or `u`/`undo` to go back to the previous part. Type `x` to exit reading without sharing results."));
-                await interaction.user.send(removeSpoilers(leadin) + "\n" + removeSpoilers(removeBonusValue(part1)));
+                let firstPart = removeSpoilers(leadin) + "\n[10] " + removeSpoilers(removeBonusValue(part1));
+                await interaction.user.send(firstPart);
             } else if (tossupMatch) {
                 const [_, question, answer, metadata] = tossupMatch;
                 const questionParts = getTossupParts(question);

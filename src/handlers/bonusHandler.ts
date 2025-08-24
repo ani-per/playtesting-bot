@@ -71,7 +71,8 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
         });
 
         if (index < userProgress.parts.length) {
-            await message.author.send(getSilentMessage(removeBonusValue(removeSpoilers(userProgress.parts[index] || ""))));
+            let partToShow = "[10] " + removeBonusValue(removeSpoilers(userProgress.parts[index] || ""));
+            await message.author.send(getSilentMessage(partToShow));
         } else {
             const key = KeySingleton.getInstance().getKey(message);
             const resultChannel = getServerChannels(userProgress.serverId).find(s => (s.channel_id === userProgress.channelId && s.channel_type === 1));
