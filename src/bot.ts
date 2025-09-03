@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, ChannelType, Interaction, TextChannel } from "discord.js";
+import { Client, GatewayIntentBits, Partials, ChannelType, Interaction, TextChannel, Events } from "discord.js";
 import { config } from "./config";
 import handleTossupPlaytest from "./handlers/tossupHandler";
 import handleBonusPlaytest from "./handlers/bonusHandler";
@@ -34,8 +34,8 @@ export const client = new Client({
     }
 });
 
-client.once("ready", () => {
-    console.log(`Logged in as ${client.user?.tag}`);
+client.once(Events.ClientReady, readyClient => {
+    console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
 client.on("messageCreate", async (message) => {
@@ -64,7 +64,7 @@ client.on("messageCreate", async (message) => {
                                 }
                             });
                         } else {
-                            let desiredPacket = desiredPacketCommand.trim().substring(0, 2);
+                            let desiredPacket = desiredPacketCommand.trim();
                             let desiredPacketBulkQuestions = getBulkQuestionsInPacket(message.guild!.id, desiredPacket);
                             if (desiredPacketBulkQuestions) {
                                 await handleTally(message.guild!.id, desiredPacket, message);
@@ -93,7 +93,7 @@ client.on("messageCreate", async (message) => {
                             updatePacketName(message.guild!.id, "");
                             message.reply(`Packet ${endPacket ? "finished" : "cleared"}.`);
                         } else {
-                            let desiredPacket = desiredPacketCommand.trim().substring(0, 2);
+                            let desiredPacket = desiredPacketCommand.trim();
                             let newPacketName = updatePacketName(message.guild!.id, desiredPacket);
                             message.reply(`Now reading packet ${newPacketName}.`);
                             const echoChannelId = getServerChannels(message.guild!.id).find(c => (c.channel_type === 3))?.channel_id;
