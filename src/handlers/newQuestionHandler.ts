@@ -1,7 +1,7 @@
 import { Message, Application, TextChannel } from "discord.js";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
-import { buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, cleanThreadName, stripFormatting } from "src/utils";
+import { buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList, reactEmojiList } from "src/utils/emojis";
 
@@ -16,7 +16,11 @@ async function handleThread(msgChannel: ServerChannel, message: Message, isBonus
 
     if (msgChannel.channel_type === 2) {
         threadName = metadata ?
-            `${thisServerSetting?.packet_name ? thisServerSetting?.packet_name + "." : ""}${isBonus ? "B" : "T"}${questionNumber} | ${categoryName} | ${fallbackName}` :
+            `${
+                thisServerSetting?.packet_name ?
+                abbreviate(thisServerSetting?.packet_name) + "." :
+                ""
+            }${isBonus ? "B" : "T"}${questionNumber} | ${categoryName} | ${fallbackName}` :
             `${isBonus ? "B" : "T"} | ${fallbackName}`;
     } else if (msgChannel.channel_type === 1) {
         threadName = metadata ?
@@ -30,7 +34,7 @@ async function handleThread(msgChannel: ServerChannel, message: Message, isBonus
     });
 
     if (thread) {
-        if (msgChannel.channel_type !== 2) {
+        if (msgChannel.channel_type === 1) {
             await thread.members.add(message.author);
         }
         await addRoles(message, thread, "Head Editor", false);
@@ -38,9 +42,10 @@ async function handleThread(msgChannel: ServerChannel, message: Message, isBonus
     }
 }
 
-async function echoQuestion(question: string, echoChannelId: string) {
+async function echoQuestion(question: string, echoChannelId: string, echoThreadId: string) {
     const echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
-    return await echoChannel.send(question.replace("!t", "").trim());
+    const echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId);
+    return await echoThread!.send(question.replace("!t", "").trim());
 }
 
 async function handleReacts(message: Message, isBonus: boolean, parts: BonusPart[]) {
@@ -132,25 +137,35 @@ export default async function handleNewQuestion(message: Message<boolean>) {
 
         if (msgChannel.channel_type !== 3) {
             if (msgChannel.channel_type === 2) {
+                let thisServerSetting = getServerSettings(message.guild!.id).find(ss => ss.server_id == message.guild!.id);
+                const packetName = thisServerSetting?.packet_name || "";
                 const echoChannelId = playtestingChannels.find(c => (c.channel_type === 3))?.channel_id;
                 if (echoChannelId) {
-                    let thisServerSetting = getServerSettings(message.guild!.id).find(ss => ss.server_id == message.guild!.id);
+                    const echoThreadId = getEchoThreadId(message.guild!.id, echoChannelId, packetName);
                     let answer_emoji = (await getEmojiList(["answer"]))[0];
                     questionEcho = "### [" +
                         (!!bonusMatch ? "Bonus " : "Tossup ") +
-                        (thisServerSetting?.packet_name ? thisServerSetting?.packet_name + "." : "") +
                         (isNumeric(questionNumber) ? questionNumber : "") + " - " +
                         getCategoryName(threadMetadata) +
                         "](" + message.url + ")" + "\n" +
                         "* " + ((answer_emoji + " ") || "") +
                         "||" + answersEcho.join(" / ") + "||";
                     // questionEcho += " - ||" + getToFirstIndicator(removeQuestionNumber(threadQuestionText), bulkCharLimit) + "||";
-                    let echoMessage = await echoQuestion(questionEcho, echoChannelId);
+                    let echoMessage = await echoQuestion(questionEcho, echoChannelId, echoThreadId);
                     if (echoMessage) {
-                        saveBulkQuestion(message.guild!.id, message.id, msgChannel.channel_id, thisServerSetting?.packet_name || "", isNumeric(questionNumber) ? Number(questionNumber) : 0, (!!bonusMatch ? "B" : "T"), getCategoryName(threadMetadata), answersEcho, echoMessage.id);
+                        saveBulkQuestion(
+                            message.guild!.id,
+                            message.id,
+                            msgChannel.channel_id, packetName || "",
+                            isNumeric(questionNumber) ? Number(questionNumber) : 0,
+                            (!!bonusMatch ? "B" : "T"),
+                            getCategoryName(threadMetadata),
+                            answersEcho,
+                            echoMessage.id
+                        );
                         if (message.content.includes("!t")) {
                             message.reply(buildButtonMessage([
-                                {label: "Return to List", id: "echo", url: echoMessage?.url || ""}
+                                {label: "Go to Index", id: "echo", url: echoMessage?.url || ""}
                             ]));
                         } else {
                             message.reply(buildButtonMessage([

@@ -1,6 +1,6 @@
 import {
     ActionRowBuilder, BaseMessageOptions, ButtonBuilder, ButtonStyle, Collection, EmbedBuilder,
-    Guild, Message, MessageCreateOptions, MessageFlags, PublicThreadChannel, TextChannel
+    Guild, Message, MessageCreateOptions, MessageFlags, PublicThreadChannel, TextChannel, TextThreadChannel
 } from "discord.js";
 import Database from 'better-sqlite3';
 import { encrypt } from "./crypto";
@@ -35,6 +35,10 @@ const insertBulkQuestionCommand = db.prepare('INSERT INTO bulk (question_id, ser
 const getBulkQuestionsQuery = db.prepare('SELECT * FROM bulk where server_id = ?');
 const getBulkQuestionsInPacketQuery = db.prepare('SELECT * FROM bulk where server_id = ? AND packet_name = ?');
 
+export const deleteEchoSettingsCommand = db.prepare('DELETE FROM echo WHERE packet_name = ?');
+export const insertEchoSettingCommand = db.prepare('INSERT INTO echo (server_id, channel_id, packet_name, thread_id) VALUES (?, ?, ?, ?)');
+const getEchoSettingsQuery = db.prepare('SELECT * FROM echo where server_id = ? AND channel_id = ?');
+
 const literature_names = ["literature", "lit", "drama", "poetry", "fiction"];
 const history_names = ["history", "historiography", "archeology"];
 const rmpss_names = ["religion", "myth", "phil", "social", "econ", "psych", "ling", "socio", "anthro", "law"]
@@ -53,6 +57,7 @@ export const isNumeric = (value: string) => (/^-?\d+$/.test(value));
 export const getQuestionNumber = (question: string) => (question.replaceAll("\\", "").match(/(^\d+)\.\s*/)?.shift()?.trim().replace("\.", "") || "");
 export const cleanThreadName = (threadName: string) => (threadName.replaceAll("For 10 points each:", "").replaceAll(", for 10 points each:", "").replaceAll(", for 10 points each.", "").replaceAll("For 10 points each,", "").replaceAll(/\s\s+/g, " ").trim());
 export const stripFormatting = (s: string) => (s.replaceAll(/[^a-zA-Z0-9À-ž.,;()/"?!\s]/g, " ").replaceAll(/\s\s+/g, " ").trim());
+export const abbreviate = (s: string) => (s.split(" ").map(w => w.charAt(0)).join(""))
 
 export const getCategoryName = (metadata: string | undefined) => {
     let category = "";
@@ -184,6 +189,13 @@ export type BulkQuestion = {
     echo_id: string;
 }
 
+export type EchoSetting = {
+    server_id: string;
+    channel_id: string;
+    packet_name: string;
+    thread_id: string;
+}
+
 export const getTossupParts = (questionText: string) => {
     const regex = /\|\|([^|]+)\|\|/g;
     const matches = [];
@@ -284,17 +296,19 @@ export const getServerChannels = (serverId: string) => {
 }
 
 export const updateResultsThreadId = (questionId: string, questionType: QuestionType, threadId: string) => {
-    if (questionType === QuestionType.Bonus)
+    if (questionType === QuestionType.Bonus) {
         updateBonusThreadCommand.run(threadId, questionId);
-    else
+    } else {
         updateTossupThreadCommand.run(threadId, questionId);
+    }
 }
 
 export const getResultsThreadId = (questionId: string, questionType: QuestionType) => {
-    if (questionType === QuestionType.Bonus)
+    if (questionType === QuestionType.Bonus) {
         return (getBonusThreadQuery.get(questionId) as any).thread_id;
-    else
+    } else {
         return (getTossupThreadQuery.get(questionId) as any).thread_id;
+    }
 }
 
 export const getResultsThreadAndUpdateSummary = async (userProgress: UserProgress, threadName: string, resultsChannel: TextChannel, playtestingChannel: TextChannel) => {
@@ -338,7 +352,7 @@ export const getResultsThreadAndUpdateSummary = async (userProgress: UserProgres
             resultsThread.send(await getBonusSummary(userProgress.questionId, userProgress.questionUrl));
         }
     } else {
-        resultsThread = resultsChannel.threads.cache.find(x => x.id === resultsThreadId);
+        resultsThread = resultsChannel.threads.cache.find(x => x.id === resultsThreadId) as TextThreadChannel;
         const resultsMessage = (await resultsThread!.messages.fetch()).find(m => m.content.includes("## Results"));
 
         if (resultsMessage) {
@@ -373,6 +387,18 @@ export const getBulkQuestionsInPacket = (serverId: string, packetName: string) =
     return getBulkQuestionsInPacketQuery.all(serverId, packetName) as BulkQuestion[];
 }
 
+export const saveEchoSetting = (serverId: string, channelId: string, packetName: string, threadId: string) => {
+    insertEchoSettingCommand.run(serverId, channelId, packetName, threadId);
+}
+
+export const getEchoSettings = (serverId: string, channelId: string) => {
+    return getEchoSettingsQuery.all(serverId, channelId) as EchoSetting[];
+}
+
+export const getEchoThreadId = (serverId: string, channelId: string, packetName: string) => {
+    return getEchoSettings(serverId, channelId).find(es => es.packet_name == packetName)?.thread_id as string;
+}
+
 export async function addRoles(
     message: Message,
     thread: PublicThreadChannel,
@@ -394,7 +420,7 @@ export async function addRoles(
 
     if (verbose) {
         await thread.send(
-            `Role: ${roleName}` +
+            (roleName ? `Role: ${roleName}` : "") +
             (note ? "\n" + note : "")
         );
     }

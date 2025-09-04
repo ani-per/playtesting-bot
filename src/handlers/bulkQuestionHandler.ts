@@ -1,5 +1,5 @@
-import { Message, TextChannel } from "discord.js";
-import { getServerChannels, getBulkQuestionsInPacket, BulkQuestion, formatPercent, getServerSettings } from "src/utils";
+import { Message, TextChannel, TextThreadChannel } from "discord.js";
+import { getServerChannels, getBulkQuestionsInPacket, formatPercent, getServerSettings, getEchoThreadId } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList } from "src/utils/emojis";
 
@@ -20,9 +20,10 @@ export default async function handleTally(serverId: string, packetName: string, 
             let echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === 3))?.channel_id;
             if (echoChannelId) {
                 let echoChannel = client.channels.cache.get(echoChannelId) as TextChannel;
+                let echoThreadId = getEchoThreadId(serverId, echoChannelId,thisServerSetting?.packet_name || "");
                 try {
-                    let echoMessage = await echoChannel.messages.fetch(bulkQuestion.echo_id);
-
+                    let echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId) as TextThreadChannel;
+                    let echoMessage = await echoThread!.messages.fetch(bulkQuestion.echo_id);
                     let questionChannel = client.channels.cache.get(bulkQuestion.channel_id) as TextChannel;
                     questionChannel.messages.cache.delete(bulkQuestion.question_id);
                     try {
@@ -62,13 +63,12 @@ export default async function handleTally(serverId: string, packetName: string, 
                             if (reactCounts.some(userReact => userReact.count > 0)) {
                                 let answer_emoji = (await getEmojiList(["answer"]))[0];
                                 let newEcho = "### [" +
-                                (bulkQuestion.question_type === "B" ? "Bonus " : "Tossup ") +
-                                (thisServerSetting?.packet_name ? thisServerSetting?.packet_name + "." : "") +
-                                (bulkQuestion.question_number ? bulkQuestion.question_number : "") + " - " +
-                                bulkQuestion.category +
-                                "](" + questionMessage.url + ")" + "\n" +
-                                "* " + ((answer_emoji + " ") || "") +
-                                `||${bulkQuestion.answers}||`;
+                                    (bulkQuestion.question_type === "B" ? "Bonus " : "Tossup ") +
+                                    (bulkQuestion.question_number ? bulkQuestion.question_number : "") + " - " +
+                                    bulkQuestion.category +
+                                    "](" + questionMessage.url + ")" + "\n" +
+                                    "* " + ((answer_emoji + " ") || "") +
+                                    `||${bulkQuestion.answers}||`;
 
                                 let play_count_emoji = await getEmojiList(["play_count"]);
                                 let reactedUsers = [... new Set(reactCounts.map(userReact => [...userReact.users]).flat().filter(u => u != Number(client.user?.id)))];
@@ -85,10 +85,10 @@ export default async function handleTally(serverId: string, packetName: string, 
                         console.log(`Question message (ID ${bulkQuestion.question_id}) for question ${bulkQuestion.question_number} in packet ${packetName} not found.`);
                     }
                 } catch {
-                    console.log(`Echo message (ID ${bulkQuestion.echo_id}) for question ${bulkQuestion.question_number} in packet ${packetName} not found.`);
+                    console.log(`Echo message (ID ${bulkQuestion.echo_id} in thread ${echoThreadId}) for question ${bulkQuestion.question_number} in packet ${packetName} not found.`);
                 }
+                await tallyReply.edit(`Tallied reacts for ${talliedQuestions} of ${packetBulkQuestions.length} questions in packet ${packetName}.`);
             }
-            await tallyReply.edit(`Tallied reacts for ${talliedQuestions} of ${packetBulkQuestions.length} questions in packet ${packetName}.`);
         }
         await tallyReply.edit(`Tallied reacts for ${packetBulkQuestions.length} questions in packet ${packetName}.`);
     } else {

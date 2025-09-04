@@ -7,7 +7,7 @@ import handleConfig from "./handlers/configHandler";
 import handleButtonClick from "./handlers/buttonClickHandler";
 import handleCategoryCommand from "./handlers/categoryCommandHandler";
 import handleTally from "./handlers/bulkQuestionHandler";
-import { QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, updatePacketName } from "./utils";
+import { QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, saveEchoSetting, updatePacketName } from "./utils";
 import handleAuthorCommand from "./handlers/authorCommandHandler";
 
 const userProgressMap = new Map<string, UserProgress>();
@@ -98,12 +98,19 @@ client.on("messageCreate", async (message) => {
                             }
                         } else {
                             let newPacketName = updatePacketName(message.guild!.id, desiredPacket);
-                            newPacketName = desiredPacket.length < 2 ? `Packet ${newPacketName}` : newPacketName;
-                            message.reply(`Now reading ${newPacketName}.`);
+                            let printPacketName = desiredPacket.length < 2 ? `Packet ${newPacketName}` : newPacketName;
+                            message.reply(`Now reading ${printPacketName}.`);
                             const echoChannelId = getServerChannels(message.guild!.id).find(c => (c.channel_type === 3))?.channel_id;
                             if (echoChannelId) {
                                 const echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
-                                echoChannel.send(`# ${newPacketName}`);
+                                let packetMessage = await echoChannel.send(`# ${printPacketName}`);
+                                if (packetMessage) {
+                                    const echoThread = await packetMessage.startThread({
+                                        name: printPacketName,
+                                        autoArchiveDuration: 60
+                                    });
+                                    saveEchoSetting(message.guild!.id, echoChannelId, newPacketName, echoThread?.id);
+                                }
                             }
                         }
                     } else {

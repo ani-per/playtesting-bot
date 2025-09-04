@@ -91,3 +91,12 @@ db.exec(`
     echo_id TEXT
   )
 `)
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS echo (
+    server_id TEXT,
+    channel_id TEXT,
+    packet_name TEXT,
+    thread_id, TEXT
+  )
+`)
