@@ -12,7 +12,7 @@ import handleAuthorCommand from "./handlers/authorCommandHandler";
 
 const userProgressMap = new Map<string, UserProgress>();
 
-const packetCommands = ["packet", "round", "read", "end"];
+const packetCommands = ["packet", "status", "round", "read", "end"];
 const tallyCommands = ["tally", "count", "end"];
 
 export const client = new Client({
@@ -48,11 +48,9 @@ client.on("messageCreate", async (message) => {
             let currentServerSetting = getServerSettings(message.guild!.id).find(ss => ss.server_id == message.guild!.id);
             let currentPacket = currentServerSetting?.packet_name;
             if (tallyCommands.some(v => message.content.startsWith("!" + v))) {
-                let currentServerSetting = getServerSettings(message.guild!.id).find(ss => ss.server_id == message.guild!.id);
-                let currentPacket = currentServerSetting?.packet_name;
                 let splits = message.content.split(" ");
                 if (splits.length > 1) {
-                    let desiredPacketCommand = splits.slice(-1)[0];
+                    let desiredPacketCommand = splits.slice(1).join(" ");
                     if (desiredPacketCommand) {
                         if (desiredPacketCommand.includes("all")) {
                             [...new Set(getBulkQuestions(message.guild!.id).map(u => u.packet_name))].forEach(async packet => {
@@ -87,19 +85,25 @@ client.on("messageCreate", async (message) => {
                 let splits = message.content.split(" ");
                 let endPacket = message.content.startsWith("!end");
                 if (splits.length > 1 || endPacket) {
-                    let desiredPacketCommand = splits.slice(-1)[0];
+                    let desiredPacketCommand = splits.slice(1).join(" ");
                     if (desiredPacketCommand || endPacket) {
+                        let desiredPacket = desiredPacketCommand.trim();
                         if (desiredPacketCommand.includes("reset") || desiredPacketCommand.includes("clear") || endPacket) {
-                            updatePacketName(message.guild!.id, "");
-                            message.reply(`Packet ${endPacket ? "finished" : "cleared"}.`);
+                            if (desiredPacket.length > 0) {
+                                updatePacketName(message.guild!.id, "");
+                                message.reply(`Packet ${desiredPacket} ${endPacket ? "finished" : "cleared"}.`);
+                            } else if (currentPacket) {
+                                updatePacketName(message.guild!.id, "");
+                                message.reply(`Packet ${currentPacket} ${endPacket ? "finished" : "cleared"}.`);
+                            }
                         } else {
-                            let desiredPacket = desiredPacketCommand.trim();
                             let newPacketName = updatePacketName(message.guild!.id, desiredPacket);
-                            message.reply(`Now reading packet ${newPacketName}.`);
+                            newPacketName = desiredPacket.length < 2 ? `Packet ${newPacketName}` : newPacketName;
+                            message.reply(`Now reading ${newPacketName}.`);
                             const echoChannelId = getServerChannels(message.guild!.id).find(c => (c.channel_type === 3))?.channel_id;
                             if (echoChannelId) {
                                 const echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
-                                echoChannel.send(`# Packet ${newPacketName}`);
+                                echoChannel.send(`# ${newPacketName}`);
                             }
                         }
                     } else {
@@ -112,7 +116,7 @@ client.on("messageCreate", async (message) => {
                         }
                     }
                 } else {
-                    if (message.content.startsWith("!packet") || message.content.startsWith("!round")) {
+                    if (message.content.startsWith("!packet") || message.content.startsWith("!status") || message.content.startsWith("!round")) {
                         if (currentPacket) {
                             message.reply(`The current packet is ${currentPacket}.`);
                         } else {
