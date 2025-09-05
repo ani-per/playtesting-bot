@@ -145,7 +145,12 @@ export default async function handleNewQuestion(message: Message<boolean>) {
                     let answer_emoji = (await getEmojiList(["answer"]))[0];
                     questionEcho = "### [" +
                         (!!bonusMatch ? "Bonus " : "Tossup ") +
-                        (isNumeric(questionNumber) ? questionNumber : "") + " - " +
+                        (
+                            isNumeric(questionNumber) ?
+                            (questionNumber + " ") :
+                            ""
+                        ) +
+                        "- " +
                         getCategoryName(threadMetadata) +
                         "](" + message.url + ")" + "\n" +
                         "* " + ((answer_emoji + " ") || "") +

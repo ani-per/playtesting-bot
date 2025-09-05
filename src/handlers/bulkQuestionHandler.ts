@@ -63,7 +63,12 @@ export default async function handleTally(serverId: string, packetName: string, 
                                 let answer_emoji = (await getEmojiList(["answer"]))[0];
                                 let newEcho = "### [" +
                                     (bulkQuestion.question_type === "B" ? "Bonus " : "Tossup ") +
-                                    (bulkQuestion.question_number ? bulkQuestion.question_number : "") + " - " +
+                                    (
+                                        bulkQuestion.question_number ?
+                                        (bulkQuestion.question_number + " ")
+                                        : ""
+                                    ) +
+                                    "- " +
                                     bulkQuestion.category +
                                     "](" + questionMessage.url + ")" + "\n" +
                                     "* " + ((answer_emoji + " ") || "") +
