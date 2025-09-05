@@ -47,13 +47,13 @@ client.once(Events.ClientReady, readyClient => {
 });
 
 client.on("messageCreate", async (message) => {
-    let serverId = message.guild!.id;
     try {
         if (message.author.id === config.DISCORD_APPLICATION_ID)
             return;
         if (message.content.startsWith("!config")) {
             await handleConfig(message);
         } else if ([...packetCommands, ...tallyCommands].some(v => message.content.startsWith("!" + v))) {
+            let serverId = message.guild!.id;
             let currentServerSetting = getServerSettings(serverId).find(ss => ss.server_id == serverId);
             let currentPacket = currentServerSetting?.packet_name || "";
             let splits = message.content.split(" ");
