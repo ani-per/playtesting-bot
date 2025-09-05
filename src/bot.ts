@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, ChannelType, Interaction, TextChannel, Events } from "discord.js";
+import { Client, GatewayIntentBits, Partials, ChannelType, Interaction, TextChannel, TextThreadChannel, Events } from "discord.js";
 import { config } from "./config";
 import handleTossupPlaytest from "./handlers/tossupHandler";
 import handleBonusPlaytest from "./handlers/bonusHandler";
@@ -7,13 +7,21 @@ import handleConfig from "./handlers/configHandler";
 import handleButtonClick from "./handlers/buttonClickHandler";
 import handleCategoryCommand from "./handlers/categoryCommandHandler";
 import handleTally from "./handlers/bulkQuestionHandler";
-import { QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, saveEchoSetting, updatePacketName } from "./utils";
+import { QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, saveEchoSetting, getEchoThreadId, updatePacketName } from "./utils";
 import handleAuthorCommand from "./handlers/authorCommandHandler";
 
 const userProgressMap = new Map<string, UserProgress>();
 
-const packetCommands = ["packet", "status", "round", "read", "end"];
-const tallyCommands = ["tally", "count", "end"];
+const packetCommands = [
+    "end", "quit", // "End" commands
+    "read", "start", // "Start" commands
+    "packet", "status", "round", // "Get" commands
+];
+const tallyCommands = [
+    "end", "quit", // "End" commands
+    "read", "start", // "Start" commands
+    "tally", "count", // "Tally" commands
+];
 
 export const client = new Client({
     intents: [
@@ -39,98 +47,136 @@ client.once(Events.ClientReady, readyClient => {
 });
 
 client.on("messageCreate", async (message) => {
+    let serverId = message.guild!.id;
     try {
         if (message.author.id === config.DISCORD_APPLICATION_ID)
             return;
         if (message.content.startsWith("!config")) {
             await handleConfig(message);
         } else if ([...packetCommands, ...tallyCommands].some(v => message.content.startsWith("!" + v))) {
-            let currentServerSetting = getServerSettings(message.guild!.id).find(ss => ss.server_id == message.guild!.id);
-            let currentPacket = currentServerSetting?.packet_name;
-            if (tallyCommands.some(v => message.content.startsWith("!" + v))) {
-                let splits = message.content.split(" ");
-                if (splits.length > 1) {
-                    let desiredPacketCommand = splits.slice(1).join(" ");
-                    if (desiredPacketCommand) {
-                        if (desiredPacketCommand.includes("all")) {
-                            [...new Set(getBulkQuestions(message.guild!.id).map(u => u.packet_name))].forEach(async packet => {
-                                let desiredPacketBulkQuestions = getBulkQuestionsInPacket(message.guild!.id, packet);
-                                if (desiredPacketBulkQuestions) {
-                                    await handleTally(message.guild!.id, packet, message);
-                                } else {
-                                    message.reply(`No questions in packet ${packet} yet.`);
-                                }
-                            });
-                        } else {
-                            let desiredPacket = desiredPacketCommand.trim();
-                            let desiredPacketBulkQuestions = getBulkQuestionsInPacket(message.guild!.id, desiredPacket);
-                            if (desiredPacketBulkQuestions) {
-                                await handleTally(message.guild!.id, desiredPacket, message);
+            let currentServerSetting = getServerSettings(serverId).find(ss => ss.server_id == serverId);
+            let currentPacket = currentServerSetting?.packet_name || "";
+            let splits = message.content.split(" ");
+            let command = splits[0];
+            let packetArgument = splits.length > 1 ? splits.slice(1).join(" ").trim() : "";
+            let startPacket = command.startsWith("!read") ||
+                command.startsWith("!start");
+            let endPacket = command.startsWith("!end") ||
+                packetArgument.startsWith("end") ||
+                packetArgument.startsWith("reset") ||
+                packetArgument.startsWith("clear");
+            let getPacket = command.startsWith("!packet") ||
+                command.startsWith("!status") ||
+                command.startsWith("!round");
+            let noPacket = false;
+            let packetToTally = packetArgument;
+            if (packetCommands.some(v => message.content.startsWith("!" + v))) {
+                if (endPacket || startPacket) {
+                    if (
+                        startPacket &&
+                        (packetArgument === currentPacket)
+                    ) {
+                        message.reply(`Packet \`${packetArgument}\` is already being read.`);
+                    } else {
+                        if (
+                            endPacket ||
+                            (startPacket && currentPacket)
+                        ) {
+                            let closingVerb = "";
+                            if (
+                                command.startsWith("!end") ||
+                                packetArgument.startsWith("end") ||
+                                (startPacket && currentPacket)
+                            ) {
+                                closingVerb = "ended";
                             } else {
-                                message.reply(`No questions in packet ${desiredPacket} yet.`);
+                                closingVerb = "cleared";
+                            }
+                            if (currentPacket) {
+                                updatePacketName(serverId, "");
+                                message.reply(`Packet \`${currentPacket}\` ${closingVerb}.`);
+                                packetToTally = currentPacket;
+                            } else if (packetArgument) {
+                                updatePacketName(serverId, "");
+                                let packetBulkQuestions = getBulkQuestionsInPacket(serverId, packetArgument);
+                                if (packetBulkQuestions.length > 0) {
+                                    message.reply(`Packet \`${packetArgument}\` ${closingVerb}.`);
+                                } else {
+                                    message.reply(`Packet \`${packetArgument}\` not found.`);
+                                }
+                            } else {
+                                noPacket = true;
                             }
                         }
-                    } else {
-                        message.reply("Invalid packet name.");
+                        if (startPacket) {
+                            let newPacketName = updatePacketName(serverId, packetArgument);
+                            currentPacket = newPacketName;
+                            let printPacketName = newPacketName.length < 2 ? `Packet ${newPacketName}` : newPacketName;
+                            const echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === 3))?.channel_id;
+                            if (echoChannelId) {
+                                const echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
+                                let echoThreadId = getEchoThreadId(serverId, echoChannelId, newPacketName);
+                                if (!echoThreadId) {
+                                    let packetMessage = await echoChannel.send(`# ${printPacketName}`);
+                                    if (packetMessage) {
+                                        const newEchoThread = await packetMessage.startThread({
+                                            name: printPacketName,
+                                            autoArchiveDuration: 60
+                                        });
+                                        saveEchoSetting(serverId, echoChannelId, newPacketName, newEchoThread?.id);
+                                        message.reply(`Now reading [\`${printPacketName}\`](${newEchoThread.url}).`);
+                                    }
+                                } else {
+                                    let echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId) as TextThreadChannel;
+                                    message.reply(`Resuming reading [\`${printPacketName}\`](${echoThread.url}).`);
+                                }
+                            } else {
+                                message.reply("Cannot begin reading. An echo channel is not configured.");
+                            }
+                        }
                     }
-                } else {
-                    if (currentPacket) {
-                        await handleTally(message.guild!.id, currentPacket, message);
+                } else if (getPacket) {
+                    if (packetArgument) {
+                        let packetBulkQuestions = getBulkQuestionsInPacket(serverId, packetArgument);
+                        message.reply(`${packetBulkQuestions.length} questions have been read as part of packet \`${packetArgument}\`.`);
+                    } else if (currentPacket) {
+                        message.reply(`The current packet is \`${currentPacket}\`.`);
                     } else {
-                        message.reply("Packet not configured yet.");
+                        noPacket = true;
                     }
                 }
             }
-            if (packetCommands.some(v => message.content.startsWith("!" + v))) {
-                let splits = message.content.split(" ");
-                let endPacket = message.content.startsWith("!end");
-                if (splits.length > 1 || endPacket) {
-                    let desiredPacketCommand = splits.slice(1).join(" ");
-                    if (desiredPacketCommand || endPacket) {
-                        let desiredPacket = desiredPacketCommand.trim();
-                        if (desiredPacketCommand.includes("reset") || desiredPacketCommand.includes("clear") || endPacket) {
-                            if (desiredPacket.length > 0) {
-                                updatePacketName(message.guild!.id, "");
-                                message.reply(`Packet ${desiredPacket} ${endPacket ? "finished" : "cleared"}.`);
-                            } else if (currentPacket) {
-                                updatePacketName(message.guild!.id, "");
-                                message.reply(`Packet ${currentPacket} ${endPacket ? "finished" : "cleared"}.`);
-                            }
-                        } else {
-                            let newPacketName = updatePacketName(message.guild!.id, desiredPacket);
-                            let printPacketName = desiredPacket.length < 2 ? `Packet ${newPacketName}` : newPacketName;
-                            message.reply(`Now reading ${printPacketName}.`);
-                            const echoChannelId = getServerChannels(message.guild!.id).find(c => (c.channel_type === 3))?.channel_id;
-                            if (echoChannelId) {
-                                const echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
-                                let packetMessage = await echoChannel.send(`# ${printPacketName}`);
-                                if (packetMessage) {
-                                    const echoThread = await packetMessage.startThread({
-                                        name: printPacketName,
-                                        autoArchiveDuration: 60
-                                    });
-                                    saveEchoSetting(message.guild!.id, echoChannelId, newPacketName, echoThread?.id);
-                                }
-                            }
-                        }
-                    } else {
-                        if (message.content.startsWith("!packet") || message.content.startsWith("!round")) {
-                            if (currentPacket) {
-                                message.reply(`The current packet is ${currentPacket}.`);
+            if (tallyCommands.some(v => command.startsWith("!" + v))) {
+                if (packetToTally) {
+                    if (packetToTally.includes("all")) {
+                        [...new Set(getBulkQuestions(serverId).map(u => u.packet_name))].forEach(async packet => {
+                            let tallyBulkQuestions = getBulkQuestionsInPacket(serverId, packet);
+                            if (tallyBulkQuestions.length > 0) {
+                                await handleTally(serverId, packet, message);
                             } else {
-                                message.reply("Packet not configured yet.");
+                                message.reply(`No questions in packet ${packet} to tally.`);
                             }
+                        });
+                    } else if (
+                        !(startPacket && packetToTally === currentPacket)
+                    ) {
+                        let tallyBulkQuestions = getBulkQuestionsInPacket(serverId, packetToTally);
+                        if (tallyBulkQuestions.length > 0) {
+                            await handleTally(serverId, packetToTally, message);
+                        } else {
+                            message.reply(`No questions in packet \`${packetToTally}\` to tally.`);
                         }
                     }
                 } else {
-                    if (message.content.startsWith("!packet") || message.content.startsWith("!status") || message.content.startsWith("!round")) {
-                        if (currentPacket) {
-                            message.reply(`The current packet is ${currentPacket}.`);
-                        } else {
-                            message.reply("Packet not configured yet.");
-                        }
+                    if (currentPacket) {
+                        await handleTally(serverId, currentPacket, message);
+                    } else {
+                        noPacket = true;
                     }
                 }
+            }
+            if (noPacket) {
+                message.reply("No packet is being read right now.");
             }
         } else if (message.content.startsWith("!category")) {
             await handleCategoryCommand(message);
