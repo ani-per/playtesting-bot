@@ -137,11 +137,12 @@ export default async function handleNewQuestion(message: Message<boolean>) {
 
         if (msgChannel.channel_type !== 3) {
             if (msgChannel.channel_type === 2) {
-                let thisServerSetting = getServerSettings(message.guild!.id).find(ss => ss.server_id == message.guild!.id);
+                let serverId = message.guild!.id;
+                let thisServerSetting = getServerSettings(serverId).find(ss => ss.server_id == serverId);
                 const packetName = thisServerSetting?.packet_name || "";
                 const echoChannelId = playtestingChannels.find(c => (c.channel_type === 3))?.channel_id;
                 if (echoChannelId) {
-                    const echoThreadId = getEchoThreadId(message.guild!.id, echoChannelId, packetName);
+                    const echoThreadId = getEchoThreadId(serverId, echoChannelId, packetName);
                     let answer_emoji = (await getEmojiList(["answer"]))[0];
                     questionEcho = "### [" +
                         (!!bonusMatch ? "Bonus " : "Tossup ") +

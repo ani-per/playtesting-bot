@@ -187,19 +187,24 @@ client.on("messageCreate", async (message) => {
             }
             if (deleteCommands.some(v => command.startsWith("!" + v))) {
                 if (packetArgument) {
-                    let echoSetting = getEchoSettings(serverId, packetArgument).find(es => es.packet_name === packetArgument);
-                    if (echoSetting) {
-                        deleteEchoSetting(serverId, packetArgument);
-                        let echoChannel = (client.channels.cache.get(echoSetting.channel_id) as TextChannel);
-                        let echoThread = echoChannel!.threads.cache.find(x => x.id === echoSetting.thread_id) as TextThreadChannel;
-                        let echoMessage = await echoChannel!.messages.fetch(echoSetting.thread_id);
-                        if (echoMessage) {
-                            await echoMessage.delete();
+                    let echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === 3))?.channel_id;
+                    if (echoChannelId) {
+                        let echoSetting = getEchoSettings(serverId, echoChannelId).find(es => es.packet_name === packetArgument);
+                        if (echoSetting) {
+                            deleteEchoSetting(serverId, packetArgument);
+                            let echoChannel = (client.channels.cache.get(echoSetting.channel_id) as TextChannel);
+                            let echoThread = echoChannel!.threads.cache.find(x => x.id === echoSetting.thread_id) as TextThreadChannel;
+                            let echoMessage = await echoChannel!.messages.fetch(echoSetting.thread_id);
+                            if (echoMessage) {
+                                await echoMessage.delete();
+                            }
+                            await echoThread.delete();
+                            message.reply(`Packet ${packetArgument} and its associated thread have been deleted.`);
+                        } else {
+                            message.reply(`Packet ${packetArgument} does not exist.`);
                         }
-                        await echoThread.delete();
-                        message.reply(`Packet ${packetArgument} and its associated thread have been deleted.`);
                     } else {
-                        message.reply(`Packet ${packetArgument} does not exist.`);
+                        message.reply("Echo channel not configured.");
                     }
                 } else {
                     message.reply("No packet name was provided to delete settings.")
