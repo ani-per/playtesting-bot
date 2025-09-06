@@ -7,21 +7,26 @@ import handleConfig from "./handlers/configHandler";
 import handleButtonClick from "./handlers/buttonClickHandler";
 import handleCategoryCommand from "./handlers/categoryCommandHandler";
 import handleTally from "./handlers/bulkQuestionHandler";
-import { QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, saveEchoSetting, getEchoThreadId, updatePacketName } from "./utils";
+import { QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, saveEchoSetting, deleteEchoSetting, getEchoThreadId, updatePacketName, getEchoSettings } from "./utils";
 import handleAuthorCommand from "./handlers/authorCommandHandler";
 
 const userProgressMap = new Map<string, UserProgress>();
 
+const startCommands = ["read", "start", "begin"];
+const getCommands = ["packet", "status", "round", "info"];
+const endCommands = ["end", "quit", "stop"];
+const clearCommands = ["reset", "clear"];
 const packetCommands = [
-    "end", "quit", // "End" commands
-    "read", "start", // "Start" commands
-    "packet", "status", "round", // "Get" commands
+    ...startCommands,
+    ...endCommands,
+    ...getCommands,
 ];
 const tallyCommands = [
-    "end", "quit", // "End" commands
-    "read", "start", // "Start" commands
-    "tally", "count", // "Tally" commands
+    ...startCommands,
+    ...endCommands,
+    "tally", "count",
 ];
+const deleteCommands = ["delete", "purge"];
 
 export const client = new Client({
     intents: [
@@ -52,28 +57,28 @@ client.on("messageCreate", async (message) => {
             return;
         if (message.content.startsWith("!config")) {
             await handleConfig(message);
-        } else if ([...packetCommands, ...tallyCommands].some(v => message.content.startsWith("!" + v))) {
+        } else if (
+            [...packetCommands, ...tallyCommands, ...deleteCommands].some(
+                v => message.content.startsWith("!" + v)
+            )
+        ) {
             let serverId = message.guild!.id;
             let currentServerSetting = getServerSettings(serverId).find(ss => ss.server_id == serverId);
             let currentPacket = currentServerSetting?.packet_name || "";
             let splits = message.content.split(" ");
             let command = splits[0];
             let packetArgument = splits.length > 1 ? splits.slice(1).join(" ").trim() : "";
-            let startPacket = command.startsWith("!read") ||
-                command.startsWith("!start");
-            let endPacket = command.startsWith("!end") ||
-                packetArgument.startsWith("end") ||
-                packetArgument.startsWith("reset") ||
-                packetArgument.startsWith("clear");
-            let getPacket = command.startsWith("!packet") ||
-                command.startsWith("!status") ||
-                command.startsWith("!round");
+            let startPacket = startCommands.some(v => command.startsWith("!" + v));
+            let clearPacket = clearCommands.some(v => packetArgument.startsWith(v));
+            let endPacket = endCommands.some(v => command.startsWith("!" + v)) || clearPacket;
+            let getPacket = getCommands.some(v => command.startsWith("!" + v));
             let noPacket = false;
             let packetToTally = packetArgument;
             if (packetCommands.some(v => message.content.startsWith("!" + v))) {
                 if (endPacket || startPacket) {
                     if (
                         startPacket &&
+                        packetArgument &&
                         (packetArgument === currentPacket)
                     ) {
                         message.reply(`Packet \`${packetArgument}\` is already being read.`);
@@ -84,7 +89,7 @@ client.on("messageCreate", async (message) => {
                         ) {
                             let closingVerb = "";
                             if (
-                                command.startsWith("!end") ||
+                                endCommands.some(v => command.startsWith("!" + v)) ||
                                 packetArgument.startsWith("end") ||
                                 (startPacket && currentPacket)
                             ) {
@@ -108,7 +113,7 @@ client.on("messageCreate", async (message) => {
                                 noPacket = true;
                             }
                         }
-                        if (startPacket) {
+                        if (startPacket && packetArgument) {
                             let newPacketName = updatePacketName(serverId, packetArgument);
                             currentPacket = newPacketName;
                             let printPacketName = newPacketName.length < 2 ? `Packet ${newPacketName}` : newPacketName;
@@ -133,6 +138,8 @@ client.on("messageCreate", async (message) => {
                             } else {
                                 message.reply("Cannot begin reading. An echo channel is not configured.");
                             }
+                        } else if (startPacket) {
+                            message.reply("Cannot begin reading. No packet name was provided.");
                         }
                     }
                 } else if (getPacket) {
@@ -170,13 +177,33 @@ client.on("messageCreate", async (message) => {
                 } else {
                     if (currentPacket) {
                         await handleTally(serverId, currentPacket, message);
-                    } else {
+                    } else if (packetArgument) {
                         noPacket = true;
                     }
                 }
             }
             if (noPacket) {
                 message.reply("No packet is being read right now.");
+            }
+            if (deleteCommands.some(v => command.startsWith("!" + v))) {
+                if (packetArgument) {
+                    let echoSetting = getEchoSettings(serverId, packetArgument).find(es => es.packet_name === packetArgument);
+                    if (echoSetting) {
+                        deleteEchoSetting(serverId, packetArgument);
+                        let echoChannel = (client.channels.cache.get(echoSetting.channel_id) as TextChannel);
+                        let echoThread = echoChannel!.threads.cache.find(x => x.id === echoSetting.thread_id) as TextThreadChannel;
+                        let echoMessage = await echoChannel!.messages.fetch(echoSetting.thread_id);
+                        if (echoMessage) {
+                            await echoMessage.delete();
+                        }
+                        await echoThread.delete();
+                        message.reply(`Packet ${packetArgument} and its associated thread have been deleted.`);
+                    } else {
+                        message.reply(`Packet ${packetArgument} does not exist.`);
+                    }
+                } else {
+                    message.reply("No packet name was provided to delete settings.")
+                }
             }
         } else if (message.content.startsWith("!category")) {
             await handleCategoryCommand(message);

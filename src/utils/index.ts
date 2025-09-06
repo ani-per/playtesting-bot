@@ -35,9 +35,9 @@ const insertBulkQuestionCommand = db.prepare('INSERT INTO bulk (question_id, ser
 const getBulkQuestionsQuery = db.prepare('SELECT * FROM bulk where server_id = ?');
 const getBulkQuestionsInPacketQuery = db.prepare('SELECT * FROM bulk where server_id = ? AND packet_name = ?');
 
-export const deleteEchoSettingsCommand = db.prepare('DELETE FROM echo WHERE packet_name = ?');
+export const deleteEchoSettingsCommand = db.prepare('DELETE FROM echo WHERE server_id = ? AND packet_name = ?');
 export const insertEchoSettingCommand = db.prepare('INSERT INTO echo (server_id, channel_id, packet_name, thread_id) VALUES (?, ?, ?, ?)');
-const getEchoSettingsQuery = db.prepare('SELECT * FROM echo where server_id = ? AND channel_id = ?');
+const getEchoSettingsQuery = db.prepare('SELECT * FROM echo where server_id = ? AND packet_name = ?');
 
 const literature_names = ["literature", "lit", "drama", "poetry", "fiction"];
 const history_names = ["history", "historiography", "archeology"];
@@ -387,12 +387,16 @@ export const getBulkQuestionsInPacket = (serverId: string, packetName: string) =
     return getBulkQuestionsInPacketQuery.all(serverId, packetName) as BulkQuestion[];
 }
 
+export const deleteEchoSetting = (serverId: string, packetName: string) => {
+    deleteEchoSettingsCommand.run(serverId, packetName);
+}
+
 export const saveEchoSetting = (serverId: string, channelId: string, packetName: string, threadId: string) => {
     insertEchoSettingCommand.run(serverId, channelId, packetName, threadId);
 }
 
-export const getEchoSettings = (serverId: string, channelId: string) => {
-    return getEchoSettingsQuery.all(serverId, channelId) as EchoSetting[];
+export const getEchoSettings = (serverId: string, packetName: string) => {
+    return getEchoSettingsQuery.all(serverId, packetName) as EchoSetting[];
 }
 
 export const getEchoThreadId = (serverId: string, channelId: string, packetName: string) => {
