@@ -138,8 +138,6 @@ client.on("messageCreate", async (message) => {
                             } else {
                                 message.reply("Cannot begin reading. An echo channel is not configured.");
                             }
-                        } else if (startPacket) {
-                            message.reply("Cannot begin reading. No packet name was provided.");
                         }
                     }
                 } else if (getPacket) {
