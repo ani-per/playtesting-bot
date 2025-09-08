@@ -1,5 +1,5 @@
 import { Message, TextChannel, TextThreadChannel } from "discord.js";
-import { getServerChannels, getBulkQuestionsInPacket, formatPercent, getServerSettings, getEchoThreadId } from "src/utils";
+import { getServerChannels, getBulkQuestionsInPacket, formatPercent, getEchoThreadId } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList } from "src/utils/emojis";
 
@@ -87,22 +87,23 @@ export default async function handleTally(serverId: string, packetName: string, 
                             talliedQuestions++;
                         }
                     } catch {
-                        console.log(`Question message (ID ${bulkQuestion.question_id}) for question ${bulkQuestion.question_number} in packet \`${packetName}\` not found.`);
+                        console.log(`Question message (ID ${bulkQuestion.question_id}) for question ${bulkQuestion.question_number} in Packet \`${packetName}\` not found.`);
                     }
                 } catch {
-                    console.log(`Echo message (ID ${bulkQuestion.echo_id} in thread ${echoThreadId}) for question ${bulkQuestion.question_number} in packet \`${packetName}\` not found.`);
+                    console.log(`Echo message (ID ${bulkQuestion.echo_id} in thread ${echoThreadId}) for question ${bulkQuestion.question_number} in Packet \`${packetName}\` not found.`);
                 }
-                await tallyReply.edit(`Tallied reacts for ${talliedQuestions} of ${packetBulkQuestions.length} question${pluralString} in [packet \`${packetName}\`](${echoThread.url}) ...`);
+                await tallyReply.edit(`Tallied reacts for ${talliedQuestions} of ${packetBulkQuestions.length} question${pluralString} in [{acket \`${packetName}\`](${echoThread.url}) ...`);
             }
             if (talliedQuestions === packetBulkQuestions.length) {
-                await tallyReply.edit(`Tallied reacts for ${talliedQuestions} question${pluralString} in [packet \`${packetName}\`](${echoThread.url}).`);
+                await tallyReply.edit(`Tallied reacts for ${talliedQuestions} question${pluralString} in [Packet \`${packetName}\`](${echoThread.url}).`);
             } else if (talliedQuestions < packetBulkQuestions.length) {
-                tallyReply.reply(`Errors in tallying ${packetBulkQuestions.length - talliedQuestions} of ${packetBulkQuestions.length} question${pluralString} in [packet \`${packetName}\`](${echoThread.url}).`)
+                tallyReply.edit(`Tallied reacts for ${talliedQuestions} of ${packetBulkQuestions.length} question${pluralString} in [Packet \`${packetName}\`](${echoThread.url}).`);
+                tallyReply.reply(`Errors in tallying ${packetBulkQuestions.length - talliedQuestions} of ${packetBulkQuestions.length} question${pluralString} in [Packet \`${packetName}\`](${echoThread.url}).`);
             }
         } else {
             console.log(`Echo channel not found for server ${serverId}.`);
         }
     } else {
-        await message.reply(`No questions in packet \`${packetName}\` to tally.`);
+        await message.reply(`No questions in Packet \`${packetName}\` to tally.`);
     }
 }

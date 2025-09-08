@@ -63,6 +63,7 @@ client.on("messageCreate", async (message) => {
             )
         ) {
             let serverId = message.guild!.id;
+            let echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === 3))?.channel_id;
             let currentServerSetting = getServerSettings(serverId).find(ss => ss.server_id == serverId);
             let currentPacket = currentServerSetting?.packet_name || "";
             let splits = message.content.split(" ");
@@ -87,6 +88,7 @@ client.on("messageCreate", async (message) => {
                             endPacket ||
                             (startPacket && currentPacket)
                         ) {
+                            let endMessage = [""];
                             let closingVerb = "";
                             if (
                                 endCommands.some(v => command.startsWith("!" + v)) ||
@@ -99,51 +101,54 @@ client.on("messageCreate", async (message) => {
                             }
                             if (currentPacket) {
                                 updatePacketName(serverId, "");
-                                message.reply(`Packet \`${currentPacket}\` ${closingVerb}.`);
                                 packetToTally = currentPacket;
+                                endMessage.push(`Reading of Packet \`${currentPacket}\` has been ${closingVerb}.`);
                             } else if (packetArgument) {
                                 updatePacketName(serverId, "");
                                 let packetBulkQuestions = getBulkQuestionsInPacket(serverId, packetArgument);
                                 if (packetBulkQuestions.length > 0) {
-                                    message.reply(`Packet \`${packetArgument}\` ${closingVerb}.`);
+                                    endMessage.push(`Packet \`${packetArgument}\` ${closingVerb}.`);
                                 } else {
-                                    message.reply(`Packet \`${packetArgument}\` not found.`);
+                                    endMessage.push(`Packet \`${packetArgument}\` not found.`);
                                 }
                             } else {
                                 noPacket = true;
                             }
+                            if (startPacket && currentPacket) {
+                                endMessage.push(`Preparing to read Packet \`${packetArgument}\` ...`);
+                            }
+                            message.reply(endMessage.join(" "));
                         }
                         if (startPacket && packetArgument) {
                             let newPacketName = updatePacketName(serverId, packetArgument);
                             currentPacket = newPacketName;
-                            let printPacketName = newPacketName.length < 2 ? `Packet ${newPacketName}` : newPacketName;
-                            const echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === 3))?.channel_id;
+                            let printPacketName = newPacketName.length < 2 ? `Packet \`${newPacketName}\`` : `\`${newPacketName}\``;
                             if (echoChannelId) {
-                                const echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
+                                let echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
                                 let echoThreadId = getEchoThreadId(serverId, echoChannelId, newPacketName);
                                 if (!echoThreadId) {
-                                    let packetMessage = await echoChannel.send(`# ${printPacketName}`);
+                                    let packetMessage = await echoChannel.send(`## [${printPacketName}](${message.url})`);
                                     if (packetMessage) {
-                                        const newEchoThread = await packetMessage.startThread({
-                                            name: printPacketName,
+                                        let newEchoThread = await packetMessage.startThread({
+                                            name: printPacketName.replaceAll("\`", ""),
                                             autoArchiveDuration: 60
                                         });
                                         saveEchoSetting(serverId, echoChannelId, newPacketName, newEchoThread?.id);
-                                        message.reply(`Now reading [\`${printPacketName}\`](${newEchoThread.url}).`);
+                                        message.reply(`Reading of [${printPacketName}](${newEchoThread.url}) has begun.`);
                                     }
                                 } else {
                                     let echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId) as TextThreadChannel;
-                                    message.reply(`Resuming reading [\`${printPacketName}\`](${echoThread.url}).`);
+                                    message.reply(`Resumed reading of [${printPacketName}](${echoThread.url}).`);
                                 }
                             } else {
-                                message.reply("Cannot begin reading. An echo channel is not configured.");
+                                message.reply("Could not begin reading. An echo channel has not been configured.");
                             }
                         }
                     }
                 } else if (getPacket) {
                     if (packetArgument) {
                         let packetBulkQuestions = getBulkQuestionsInPacket(serverId, packetArgument);
-                        message.reply(`${packetBulkQuestions.length} questions have been read as part of packet \`${packetArgument}\`.`);
+                        message.reply(`${packetBulkQuestions.length} questions have been read as part of Packet \`${packetArgument}\`.`);
                     } else if (currentPacket) {
                         message.reply(`The current packet is \`${currentPacket}\`.`);
                     } else {
@@ -159,17 +164,17 @@ client.on("messageCreate", async (message) => {
                             if (tallyBulkQuestions.length > 0) {
                                 await handleTally(serverId, packet, message);
                             } else {
-                                message.reply(`No questions in packet ${packet} to tally.`);
+                                message.reply(`No questions to tally in Packet ${packet}.`);
                             }
                         });
                     } else if (
-                        !(startPacket && packetToTally === currentPacket)
+                        !(startPacket && (packetToTally === currentPacket))
                     ) {
                         let tallyBulkQuestions = getBulkQuestionsInPacket(serverId, packetToTally);
                         if (tallyBulkQuestions.length > 0) {
                             await handleTally(serverId, packetToTally, message);
                         } else {
-                            message.reply(`No questions in packet \`${packetToTally}\` to tally.`);
+                            message.reply(`No questions to tally in Packet \`${packetToTally}\`.`);
                         }
                     }
                 } else {
@@ -185,8 +190,8 @@ client.on("messageCreate", async (message) => {
             }
             if (deleteCommands.some(v => command.startsWith("!" + v))) {
                 if (packetArgument) {
-                    let echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === 3))?.channel_id;
                     if (echoChannelId) {
+                        let deleteMessage = [""];
                         let echoSetting = getEchoSettings(serverId, echoChannelId).find(es => es.packet_name === packetArgument);
                         if (echoSetting) {
                             deleteEchoSetting(serverId, packetArgument);
@@ -197,9 +202,14 @@ client.on("messageCreate", async (message) => {
                                 await echoMessage.delete();
                             }
                             await echoThread.delete();
-                            message.reply(`Packet ${packetArgument} and its associated thread have been deleted.`);
+                            if (currentPacket === packetArgument) {
+                                updatePacketName(serverId, "");
+                                deleteMessage.push(`Reading of Packet \`${currentPacket}\` has been ended.`);
+                            }
+                            deleteMessage.push(`Packet \`${packetArgument}\` and its associated thread have been deleted.`);
+                            message.reply(deleteMessage.join(" "));
                         } else {
-                            message.reply(`Packet ${packetArgument} does not exist.`);
+                            message.reply(`Packet \`${packetArgument}\` does not exist.`);
                         }
                     } else {
                         message.reply("Echo channel not configured.");
