@@ -97,12 +97,12 @@ client.on("messageCreate", async (message) => {
                             ) {
                                 closingVerb = "ended";
                             } else {
-                                closingVerb = "cleared";
+                                closingVerb = "been cleared";
                             }
                             if (currentPacket) {
                                 updatePacketName(serverId, "");
                                 packetToTally = currentPacket;
-                                endMessage.push(`Reading of Packet \`${currentPacket}\` has been ${closingVerb}.`);
+                                endMessage.push(`Reading of Packet \`${currentPacket}\` has ${closingVerb}.`);
                             } else if (packetArgument) {
                                 updatePacketName(serverId, "");
                                 let packetBulkQuestions = getBulkQuestionsInPacket(serverId, packetArgument);
@@ -204,7 +204,7 @@ client.on("messageCreate", async (message) => {
                             await echoThread.delete();
                             if (currentPacket === packetArgument) {
                                 updatePacketName(serverId, "");
-                                deleteMessage.push(`Reading of Packet \`${currentPacket}\` has been ended.`);
+                                deleteMessage.push(`Reading of Packet \`${currentPacket}\` has ended.`);
                             }
                             deleteMessage.push(`Packet \`${packetArgument}\` and its associated thread have been deleted.`);
                             message.reply(deleteMessage.join(" "));

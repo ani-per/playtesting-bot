@@ -92,7 +92,7 @@ export default async function handleTally(serverId: string, packetName: string, 
                 } catch {
                     console.log(`Echo message (ID ${bulkQuestion.echo_id} in thread ${echoThreadId}) for question ${bulkQuestion.question_number} in Packet \`${packetName}\` not found.`);
                 }
-                await tallyReply.edit(`Tallied reacts for ${talliedQuestions} of ${packetBulkQuestions.length} question${pluralString} in [{acket \`${packetName}\`](${echoThread.url}) ...`);
+                await tallyReply.edit(`Tallied reacts for ${talliedQuestions} of ${packetBulkQuestions.length} question${pluralString} in [Packet \`${packetName}\`](${echoThread.url}) ...`);
             }
             if (talliedQuestions === packetBulkQuestions.length) {
                 await tallyReply.edit(`Tallied reacts for ${talliedQuestions} question${pluralString} in [Packet \`${packetName}\`](${echoThread.url}).`);
