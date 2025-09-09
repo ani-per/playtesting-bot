@@ -171,9 +171,11 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                         {label: "Discussion Thread", id: "bulk_thread", url: thread.url}
                     ]));
                 }
-                await addRoles(message, thread, "Head Editor", false);
+                await addRoles(message, thread, ["Head Editor"], false);
                 if (interaction.customId === "async_thread") {
-                    await addRoles(message, thread, categoryRoleName, true);
+                    await addRoles(message, thread, [categoryRoleName], true);
+                } else if (interaction.customId === "bulk_thread") {
+                    await addRoles(message, thread, ["Playtester", categoryRoleName], true);
                 }
             }
         }
