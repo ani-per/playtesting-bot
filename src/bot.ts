@@ -12,9 +12,9 @@ import handleAuthorCommand from "./handlers/authorCommandHandler";
 
 const userProgressMap = new Map<string, UserProgress>();
 
-const startCommands = ["read", "start", "begin"];
+const startCommands = ["start", "read", "begin"];
 const getCommands = ["packet", "status", "round", "info"];
-const endCommands = ["end", "quit", "stop"];
+const endCommands = ["stop", "quit"];
 const clearCommands = ["reset", "clear"];
 const packetCommands = [
     ...startCommands,
@@ -86,7 +86,11 @@ client.on("messageCreate", async (message) => {
                     } else {
                         if (
                             endPacket ||
-                            (startPacket && currentPacket)
+                            (
+                                startPacket &&
+                                currentPacket &&
+                                packetArgument
+                            )
                         ) {
                             let endMessage = [""];
                             let closingVerb = "";
@@ -114,7 +118,11 @@ client.on("messageCreate", async (message) => {
                             } else {
                                 noPacket = true;
                             }
-                            if (startPacket && currentPacket) {
+                            if (
+                                startPacket &&
+                                currentPacket &&
+                                packetArgument
+                            ) {
                                 endMessage.push(`Preparing to read Packet \`${packetArgument}\` ...`);
                             }
                             message.reply(endMessage.join(" "));
@@ -178,7 +186,7 @@ client.on("messageCreate", async (message) => {
                         }
                     }
                 } else {
-                    if (currentPacket) {
+                    if (endPacket && currentPacket) {
                         await handleTally(serverId, currentPacket, message);
                     } else if (packetArgument) {
                         noPacket = true;
