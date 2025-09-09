@@ -172,7 +172,9 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                     ]));
                 }
                 await addRoles(message, thread, "Head Editor", false);
-                await addRoles(message, thread, categoryRoleName, true);
+                if (interaction.customId === "async_thread") {
+                    await addRoles(message, thread, categoryRoleName, true);
+                }
             }
         }
     }

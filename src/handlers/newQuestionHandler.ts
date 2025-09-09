@@ -34,11 +34,11 @@ async function handleThread(msgChannel: ServerChannel, message: Message, isBonus
     });
 
     if (thread) {
+        await addRoles(message, thread, "Head Editor", false);
         if (msgChannel.channel_type === 1) {
             await thread.members.add(message.author);
+            await addRoles(message, thread, categoryRoleName, true);
         }
-        await addRoles(message, thread, "Head Editor", false);
-        await addRoles(message, thread, categoryRoleName, true);
     }
 }
 
