@@ -57,7 +57,14 @@ export const isNumeric = (value: string) => (/^-?\d+$/.test(value));
 export const getQuestionNumber = (question: string) => (question.replaceAll("\\", "").match(/(^\d+)\.\s*/)?.shift()?.trim().replace("\.", "") || "");
 export const cleanThreadName = (threadName: string) => (threadName.replaceAll("For 10 points each:", "").replaceAll(", for 10 points each:", "").replaceAll(", for 10 points each.", "").replaceAll("For 10 points each,", "").replaceAll(/\s\s+/g, " ").trim());
 export const stripFormatting = (s: string) => (s.replaceAll(/[^a-zA-Z0-9À-ž.,;()/"?!\s]/g, " ").replaceAll(/\s\s+/g, " ").trim());
-export const abbreviate = (s: string) => (s.split(" ").map(w => w.charAt(0)).join(""))
+export const abbreviate = (s: string) => (s.split(" ").map(w => w.charAt(0)).join(""));
+export const toTitleCase = (s: String) => (
+    s.toLowerCase().split(" ").map(function (word) {
+        if (word === "") return "";
+        return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join(" ")
+);
+export const cleanPacketName = (s: string) => (toTitleCase(s.toLowerCase().replace(/packet|pack|round/gi, "").trim()))
 
 export const getCategoryName = (metadata: string | undefined) => {
     let category = "";
@@ -276,7 +283,7 @@ export const saveBulkServerChannelsFromMessage = (collected: Collection<string, 
     let currentServerChannels = getServerChannels(server?.id);
 
     let saved_channels: string[] = [];
-    tags.forEach(function(tag) {
+    tags.forEach(function (tag) {
         const [_, channelId] = tag.match(/<#(\d+)>/) || [];
         const channel = server.channels.cache.find((channel) => channel.id === channelId);
 
@@ -334,14 +341,14 @@ export const getResultsThreadAndUpdateSummary = async (userProgress: UserProgres
             const questionMessage = await playtestingChannel.messages.fetch(userProgress.questionId);
             if (questionMessage.hasThread || questionMessage.content.includes("!t")) {
                 buttonMessage.edit(buildButtonMessage([
-                    {label: buttonLabel, id: "play_question", url: ""},
-                    {label: "Results", id: "", url: resultsThread.url}
+                    { label: buttonLabel, id: "play_question", url: "" },
+                    { label: "Results", id: "", url: resultsThread.url }
                 ]));
             } else {
                 buttonMessage.edit(buildButtonMessage([
-                    {label: "Create Discussion Thread", id: "async_thread", url: ""},
-                    {label: buttonLabel, id: "play_question", url: ""},
-                    {label: "Results", id: "", url: resultsThread.url}
+                    { label: "Create Discussion Thread", id: "async_thread", url: "" },
+                    { label: buttonLabel, id: "play_question", url: "" },
+                    { label: "Results", id: "", url: resultsThread.url }
                 ]));
             }
         }

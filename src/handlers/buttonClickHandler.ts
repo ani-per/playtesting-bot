@@ -43,7 +43,15 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                     results: []
                 } as UserBonusProgress);
 
-                await interaction.user.send(getEmbeddedMessage("Here's your bonus! Type `d`/`direct` to check your the answer to the current part, `p`/`pass` if you don't have a guess, or `u`/`undo` to go back to the previous part. Type `x` to exit reading without sharing results."));
+                await interaction.user.send(getEmbeddedMessage(
+                    [
+                        "Here's your bonus! Type:",
+                        "* `d` — direct an answer to the current part",
+                        "* `p` - pass without directing a guess",
+                        "* `u` — undo and go back to the previous part",
+                        "* `x` — exit reading without sharing results"
+                    ].join("\n")
+                ));
                 let firstPart = removeSpoilers(leadin) + "\n[10] " + removeSpoilers(removeBonusValue(part1));
                 await interaction.user.send(firstPart);
             } else if (tossupMatch) {
@@ -69,7 +77,16 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                 } as UserTossupProgress);
 
                 if (questionParts[0]) {
-                    await interaction.user.send(getEmbeddedMessage("Here's your tossup! Type `b`/`buzz` to buzz, `n`/`next` to see the next clue, or `u`/`undo` to go back to the previous clue. You may share your guess or a comment at this point by putting it in parentheses at the end of your message — e.g. `n (foo? bar?)`. Type `x` to exit reading without sharing results."));
+                    await interaction.user.send(getEmbeddedMessage(
+                        [
+                            "Here's your tossup! Type:",
+                            "* `b` — buzz on the current clue",
+                            "* `u` — undo and go back to the previous part",
+                            "* `e` — end tossup without providing an answer",
+                            "* `x` — exit reading without sharing results",
+                            "You may share your guess or a comment by putting it in parentheses at the end of your message — e.g. `n (foo? bar?)`."
+                        ].join("\n")
+                    ));
                     await interaction.user.send(questionParts[0]);
                 } else {
                     await interaction.user.send(getEmbeddedMessage("Oops, looks like the question wasn't properly spoiler tagged. Let the author know so they can fix!"));
