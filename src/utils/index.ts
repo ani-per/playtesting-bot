@@ -32,12 +32,14 @@ const getTossupCategoryCountQuery = db.prepare('SELECT COUNT(*) AS category_coun
 const getBonusCategoryCountQuery = db.prepare('SELECT COUNT(*) AS category_count FROM bonus WHERE author_id = ? AND server_id = ? AND category = ?');
 
 const insertBulkQuestionCommand = db.prepare('INSERT INTO bulk (question_id, server_id, channel_id, packet_name, question_number, question_type, category, answers, echo_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-const getBulkQuestionsQuery = db.prepare('SELECT * FROM bulk where server_id = ?');
-const getBulkQuestionsInPacketQuery = db.prepare('SELECT * FROM bulk where server_id = ? AND packet_name = ?');
+const getBulkQuestionsQuery = db.prepare('SELECT * FROM bulk WHERE server_id = ?');
+const getBulkQuestionsInPacketQuery = db.prepare('SELECT * FROM bulk WHERE server_id = ? AND packet_name = ?');
+export const deleteBulkQuestionCommand = db.prepare('DELETE FROM bulk WHERE server_id = ? AND question_id = ?');
+export const deleteBulkPacketCommand = db.prepare('DELETE FROM bulk WHERE server_id = ? AND packet_name = ?');
 
 export const deleteEchoSettingsCommand = db.prepare('DELETE FROM echo WHERE server_id = ? AND packet_name = ?');
 export const insertEchoSettingCommand = db.prepare('INSERT INTO echo (server_id, channel_id, packet_name, thread_id) VALUES (?, ?, ?, ?)');
-const getEchoSettingsQuery = db.prepare('SELECT * FROM echo where server_id = ? AND channel_id = ?');
+const getEchoSettingsQuery = db.prepare('SELECT * FROM echo WHERE server_id = ? AND channel_id = ?');
 
 const literature_names = ["literature", "lit", "drama", "poetry", "fiction"];
 const history_names = ["history", "historiography", "archeology"];
@@ -48,6 +50,7 @@ const other_names = ["other", "academic", "geography", "current", "events", "pop
 
 type nullableString = string | null | undefined;
 
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const removeSpoilers = (text: string) => text?.replaceAll("||", "").trim() || "";
 export const shortenAnswerline = (answerline: string) => removeSpoilers(answerline.replaceAll("`", "").replaceAll(/ \[.+\]/g, "").replaceAll(/ \(.+\)/g, "")).trim();
 export const removeBonusValue = (bonusPart: string) => bonusPart.replace(/\|{0,2}\[10\|{0,2}[emh]?\|{0,2}]\|{0,2} ?/, "");
@@ -64,7 +67,8 @@ export const toTitleCase = (s: String) => (
         return word.charAt(0).toUpperCase() + word.slice(1);
     }).join(" ")
 );
-export const cleanPacketName = (s: string) => (toTitleCase(s.toLowerCase().replace(/packet|pack|round/gi, "").trim()))
+export const cleanPacketName = (s: string) => (toTitleCase(s.toLowerCase().replace(/packet|pack|round/gi, "").trim()));
+export const printPacketName = (s: string) => (s.length < 2 ? `Packet \`${s}\`` : `\`${s}\``);
 
 export const getCategoryName = (metadata: string | undefined) => {
     let category = "";
@@ -392,6 +396,14 @@ export const getBulkQuestions = (serverId: string) => {
 
 export const getBulkQuestionsInPacket = (serverId: string, packetName: string) => {
     return getBulkQuestionsInPacketQuery.all(serverId, packetName) as BulkQuestion[];
+}
+
+export const deleteBulkQuestion = (serverId: string, questionId: string) => {
+    deleteBulkQuestionCommand.run(serverId, questionId);
+}
+
+export const deleteBulkPacket = (serverId: string, packetName: string) => {
+    deleteBulkPacketCommand.run(serverId, packetName);
 }
 
 export const deleteEchoSetting = (serverId: string, packetName: string) => {

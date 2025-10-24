@@ -2,12 +2,14 @@
 
 This is a Discord bot that can be used to playtest ACF-style quizbowl questions. After the bot is invited to a server and configured, it can be used for either or both of two situations:
 
-* Internal "**asynchronous**" playtesting (question-by-question)
-  * As questions are written and edited, they can be playtested internally by other members of the editing team. This occurs asynchronously, with each member playing the question individually.
-  * In this situation, editors play questions via DMs with the bot. Each question can be discussed in an associated thread. The results are published to a new thread in another channel.
-* External "**bulk**" playtesting (packet-by-packet or category-by-category)
-  * Once a set reaches the stage at which packets are being assembled, packets can be playtested as a whole with a troupe of playtesters who are not on the editing team. This occurs in "bulk," with the troupe at once hearing all of the questions in a given packet being read over audio.
-  * In this situation, playtesters give answers in a bulk playtesting channel. Playtesters use reactions to indicate their results for each question (e.g. "10"/"0" for tossups; "E"/"M"/"H" for bonuses). Each question can be discussed in an associated thread.
+* Internal "**asynchronous**" playtesting (*question-by-question*)
+  * As questions are written and edited, they may be playtested internally by other members of the editing team. This occurs *asynchronously*, with each member playing the question individually.
+  * In this workflow, editors play questions via DMs with the bot. Each question may be discussed in an associated thread.
+  * The conversion statistics are published to a new thread in a "results" channel (e.g. `#results`).
+* External "**bulk**" playtesting (*packet-by-packet* or *category-by-category*)
+  * Once a set reaches the stage at which packets are being assembled, packets or categories may be playtested as a whole with a troupe of playtesters who are not on the editing team. This occurs in "*bulk*," with the troupe at once hearing all of the questions in a given packet being read over audio.
+  * In this workflow, playtesters give answers in a bulk playtesting channel. Playtesters use reactions to indicate their results for each question (e.g. `10`/`-5` for tossups; `E`/`M`/`H`/`0` for bonuses). Each question may be discussed in an associated thread.
+  * The conversion statistics and links to each question thread are published to a new thread in an index channel (e.g. `#questions`).
 
 The bot was created by [Jordan Brownstein](https://github.com/JemCasey) in 2023 for the production of 2024 Chicago Open. Jordan wrote the bulk of the code, and in 2024 [Ani Perumalla](https://github.com/ani-per) added a few new features for the production of 2025 ACF Regionals. [Ophir Lifshitz](https://github.com/hftf) designed the bulk playtesting react emojis and provided suggestions and feedback on features.
 
@@ -97,7 +99,11 @@ To play [an asynchronous question that has been detected by the bot](./examples/
 
 #### Bulk Playtesting
 
-* To begin reading a packet (e.g. `Packet A`), send the message `!read A` or `!packet A` or `!round A`. [^2]
+> [!NOTE]
+>
+> The most up-to-date documentation is available in [this article](https://gist.github.com/acfquizbowl/7983064671e257b15de96547ef192129). The below documentation is not maintained as frequently.
+
+* To begin reading a packet (e.g. `Packet A`), send the message `!read A` or `!packet A` or `!round A`.
 * [For each question in the packet to be playtested](./examples/bulk.png), paste the spoiler-tagged question in any of the bulk playtesting channels. Just like in asynchronous playtesting, adding `!t` to the question content will auto-create a discussion thread.
   * The bot will auto-react to the question message with a set of reacts depending on if it's a tossup or bonus:
     * Tossups
@@ -122,7 +128,7 @@ To play [an asynchronous question that has been detected by the bot](./examples/
 * At any time, send the message `!packet` or `!round` to print the current packet name.
 * At any time, send the message `!tally` or `!count` to automatically tally the reacts to each question in the current packet and publish the counts to the echo channel.
   * To tally reacts for any specific packet (e.g. `Packet A`), send the message `!tally A` or `!count A`.
-* To finish the packet, send the message `!end`. This will tally reacts for the current packet and then reset the packet name.
+* To finish the packet, send the message `!stop`. This will tally reacts for the current packet and then reset the packet name.
 * To reset the packet name, send the message `!packet reset` or `!packet clear`.
 
 ## Instructions for Developers
@@ -183,7 +189,7 @@ As [mentioned above](#configuration), there is already an instance of the bot th
 
 ### Using Your Bot
 
-* The invite URL for your bot is of the format below [^3]:
+* The invite URL for your bot is of the format below [^2]:
 
   ```none
   https://discord.com/api/oauth2/authorize?client_id=[Bot Application ID]&permissions=9122779245632&scope=bot
@@ -215,6 +221,4 @@ Hence, if you are running on e.g. a Raspberry Pi, prevent it from falling asleep
 
 [^1]: The ACF Production Server Template was created in 2024 by Ani Perumalla for the production of 2025 ACF Regionals.
 
-[^2]: The packet name length is restricted to at most 2 characters.
-
-[^3]: The permissions integer `9122779245632` in the URL is based on the permissions that the bot should need to run properly. If you encounter any problems, try re-adding the bot to the server using the same URL but with the integer replaced with `8` (the administrator integer).
+[^2]: The permissions integer `9122779245632` in the URL is based on the permissions that the bot should need to run properly. If you encounter any problems, try re-adding the bot to the server using the same URL but with the integer replaced with `8` (the administrator integer).

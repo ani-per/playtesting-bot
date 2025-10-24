@@ -7,24 +7,24 @@ import handleConfig from "./handlers/configHandler";
 import handleButtonClick from "./handlers/buttonClickHandler";
 import handleCategoryCommand from "./handlers/categoryCommandHandler";
 import handleTally from "./handlers/bulkQuestionHandler";
-import { QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, saveEchoSetting, deleteEchoSetting, getEchoThreadId, updatePacketName, getEchoSettings, cleanPacketName } from "./utils";
+import { sleep, QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, saveEchoSetting, deleteEchoSetting, getEchoThreadId, updatePacketName, getEchoSettings, cleanPacketName, printPacketName, deleteBulkPacket } from "./utils";
 import handleAuthorCommand from "./handlers/authorCommandHandler";
 
 const userProgressMap = new Map<string, UserProgress>();
 
 const startCommands = ["start", "read", "begin"];
 const getCommands = ["packet", "status", "round", "info"];
-const endCommands = ["stop", "quit"];
+const stopCommands = ["stop", "quit"];
 const clearCommands = ["reset", "clear"];
-const helpCommands = ["help"];
+const helpCommands = ["commands", "help"];
 const packetCommands = [
     ...startCommands,
-    ...endCommands,
+    ...stopCommands,
     ...getCommands,
 ];
 const tallyCommands = [
     ...startCommands,
-    ...endCommands,
+    ...stopCommands,
     "tally", "count",
 ];
 const deleteCommands = ["delete", "purge"];
@@ -102,7 +102,7 @@ client.on("messageCreate", async (message) => {
             let cleanedPacketName = cleanPacketName(packetArgument);
             let startPacket = startCommands.some(v => command.startsWith("!" + v));
             let clearPacket = clearCommands.some(v => packetArgument.startsWith(v));
-            let endPacket = endCommands.some(v => command.startsWith("!" + v)) || clearPacket;
+            let endPacket = stopCommands.some(v => command.startsWith("!" + v)) || clearPacket;
             let getPacket = getCommands.some(v => command.startsWith("!" + v));
             let noPacket = false;
             let packetToTally = cleanPacketName(packetArgument);
@@ -113,7 +113,7 @@ client.on("messageCreate", async (message) => {
                         packetArgument &&
                         (cleanedPacketName === currentPacket)
                     ) {
-                        message.reply(`Packet \`${cleanedPacketName}\` is already being read.`);
+                        message.reply(`${printPacketName(cleanedPacketName)} is already being read.`);
                     } else {
                         if (
                             endPacket ||
@@ -126,7 +126,7 @@ client.on("messageCreate", async (message) => {
                             let endMessage = [""];
                             let closingVerb = "";
                             if (
-                                endCommands.some(v => command.startsWith("!" + v)) ||
+                                stopCommands.some(v => command.startsWith("!" + v)) ||
                                 packetArgument.startsWith("end") ||
                                 (startPacket && currentPacket)
                             ) {
@@ -137,14 +137,14 @@ client.on("messageCreate", async (message) => {
                             if (currentPacket) {
                                 updatePacketName(serverId, "");
                                 packetToTally = currentPacket;
-                                endMessage.push(`Reading of Packet \`${currentPacket}\` has ${closingVerb}.`);
+                                endMessage.push(`Reading of ${printPacketName(currentPacket)} has ${closingVerb}.`);
                             } else if (packetArgument) {
                                 updatePacketName(serverId, "");
                                 let packetBulkQuestions = getBulkQuestionsInPacket(serverId, cleanedPacketName);
                                 if (packetBulkQuestions.length > 0) {
-                                    endMessage.push(`Packet \`${cleanedPacketName}\` ${closingVerb}.`);
+                                    endMessage.push(`${printPacketName(cleanedPacketName)} ${closingVerb}.`);
                                 } else {
-                                    endMessage.push(`Packet \`${cleanedPacketName}\` not found.`);
+                                    endMessage.push(`${printPacketName(cleanedPacketName)} not found.`);
                                 }
                             } else {
                                 noPacket = true;
@@ -154,30 +154,30 @@ client.on("messageCreate", async (message) => {
                                 currentPacket &&
                                 packetArgument
                             ) {
-                                endMessage.push(`Preparing to read Packet \`${cleanedPacketName}\` ...`);
+                                endMessage.push(`Preparing to read ${printPacketName(cleanedPacketName)} ...`);
                             }
                             message.reply(endMessage.join(" "));
                         }
                         if (startPacket && packetArgument) {
                             let newPacketName = updatePacketName(serverId, cleanedPacketName);
                             currentPacket = newPacketName;
-                            let printPacketName = newPacketName.length < 2 ? `Packet \`${newPacketName}\`` : `\`${newPacketName}\``;
+                            let printPacket = printPacketName(currentPacket);
                             if (echoChannelId) {
                                 let echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
                                 let echoThreadId = getEchoThreadId(serverId, echoChannelId, newPacketName);
                                 if (!echoThreadId) {
-                                    let packetMessage = await echoChannel.send(`## [${printPacketName}](${message.url})`);
+                                    let packetMessage = await echoChannel.send(`## [${printPacket}](${message.url})`);
                                     if (packetMessage) {
                                         let newEchoThread = await packetMessage.startThread({
-                                            name: printPacketName.replaceAll("\`", ""),
+                                            name: printPacket.replaceAll("\`", ""),
                                             autoArchiveDuration: 60
                                         });
                                         saveEchoSetting(serverId, echoChannelId, newPacketName, newEchoThread?.id);
-                                        message.reply(`Reading of [${printPacketName}](${newEchoThread.url}) has begun.`);
+                                        message.reply(`Reading of [${printPacket}](${newEchoThread.url}) has begun.`);
                                     }
                                 } else {
                                     let echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId) as TextThreadChannel;
-                                    message.reply(`Resumed reading of [${printPacketName}](${echoThread.url}).`);
+                                    message.reply(`Resumed reading of [${printPacket}](${echoThread.url}).`);
                                 }
                             } else {
                                 message.reply("Could not begin reading. An echo channel has not been configured.");
@@ -187,9 +187,9 @@ client.on("messageCreate", async (message) => {
                 } else if (getPacket) {
                     if (packetArgument) {
                         let packetBulkQuestions = getBulkQuestionsInPacket(serverId, cleanedPacketName);
-                        message.reply(`${packetBulkQuestions.length} questions have been read as part of Packet \`${cleanedPacketName}\`.`);
+                        message.reply(`${packetBulkQuestions.length} questions have been read as part of ${printPacketName(cleanedPacketName)}.`);
                     } else if (currentPacket) {
-                        message.reply(`The current packet is \`${currentPacket}\`.`);
+                        message.reply(`The current packet is ${printPacketName(currentPacket)}.`);
                     } else {
                         noPacket = true;
                     }
@@ -241,14 +241,15 @@ client.on("messageCreate", async (message) => {
                                 await echoMessage.delete();
                             }
                             await echoThread.delete();
+                            deleteBulkPacket(serverId, cleanedPacketName);
                             if (currentPacket === cleanedPacketName) {
                                 updatePacketName(serverId, "");
-                                deleteMessage.push(`Reading of Packet \`${currentPacket}\` has ended.`);
+                                deleteMessage.push(`Reading of ${printPacketName(currentPacket)} has ended.`);
                             }
-                            deleteMessage.push(`Packet \`${cleanedPacketName}\` and its associated thread have been deleted.`);
+                            deleteMessage.push(`${printPacketName(cleanedPacketName)} and its associated thread have been deleted.`);
                             message.reply(deleteMessage.join(" "));
                         } else {
-                            message.reply(`Packet \`${cleanedPacketName}\` does not exist.`);
+                            message.reply(`${printPacketName(cleanedPacketName)} does not exist.`);
                         }
                     } else {
                         message.reply("Echo channel not configured.");
@@ -258,6 +259,7 @@ client.on("messageCreate", async (message) => {
                 }
             }
             if (helpCommands.some(v => message.content.startsWith("!" + v))) {
+                await sleep(1000);
                 message.reply({ embeds: [helpEmbed] })
             }
         } else if (message.content.startsWith("!category")) {
