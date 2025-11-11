@@ -430,21 +430,9 @@ export async function addRoles(
     note = "-# (Click \"Jump\" at question's upper-right to see its reactions in the main channel.)"
 ) {
     let roleDesc = roleNames.filter(v => v).join(", ");
-    await message.guild?.members.fetch().then(members => {
-        let roleUsers = members.filter(member => (
-            roleNames.every(roleName => member.roles.cache.find(role => role.name === roleName)) &&
-            member.permissionsIn(message.channel.id).has("ViewChannel")
-        ));
-        roleUsers.forEach(async u => {
-            // console.log(`Roles: ${roleDesc}; User tag: ${u.user.tag}; User ID: ${u.user.id}`);
-            await thread.members.add(u.user);
-        });
-        // console.log(`Users with ${roleDesc} roles and permissions to view channel: ${roleUsers.map(u => u.user.username).join(", ")}`);
-    });
-
     if (verbose) {
         let roleNote = "";
-        if (roleNames) {
+        if (roleNames && roleDesc) {
             roleNote = `Roles: ${roleDesc}`;
         } else {
             roleNote = "Couldn't detect a role to tag.";
@@ -454,6 +442,15 @@ export async function addRoles(
             (note ? "\n" + note : "")
         );
     }
+
+    message.guild?.members.cache.forEach(member => {
+        if (
+            roleNames.every(roleName => member.roles.cache.find(role => role.name === roleName)) &&
+            member.permissionsIn(message.channel.id).has("ViewChannel")
+        ) {
+            thread.members.add(member);
+        }
+    });
 }
 
 export async function getTossupSummary(questionId: string, questionParts: string[], answer: string, questionUrl: string) {
