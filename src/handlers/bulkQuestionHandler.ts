@@ -20,7 +20,8 @@ export default async function handleTally(serverId: string, packetName: string, 
             let echoChannel = client.channels.cache.get(echoChannelId) as TextChannel;
             let echoThreadId = getEchoThreadId(serverId, echoChannelId, packetName);
             let echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId) as TextThreadChannel;
-            let tallyReply = await message.reply(`Tallying reacts for ${packetBulkQuestions.length} question${pluralString} in [${printPacketName(packetName)}](${echoThread!.url}) ...`);
+            let tallyPacketDesc = echoThread ? `[${printPacketName(packetName)}](${echoThread!.url})` : `${printPacketName(packetName)}`
+            let tallyReply = await message.reply(`Tallying reacts for ${packetBulkQuestions.length} question${pluralString} in ${tallyPacketDesc} ...`);
             for await (const bulkQuestion of packetBulkQuestions) {
                 try {
                     let echoMessage = await echoThread!.messages.fetch(bulkQuestion.echo_id);
@@ -89,14 +90,14 @@ export default async function handleTally(serverId: string, packetName: string, 
                                 }
                                 tallyCount++;
                             } else {
-                                console.log(`Echo message (ID ${bulkQuestion.echo_id} in thread ${echoThreadId}) for question ${bulkQuestion.question_number} in ${printPacketName(packetName)} - ${echoThread!.url} not found for tallying.`);
+                                console.log(`Echo message (ID ${bulkQuestion.echo_id} in thread ${echoThreadId}) for question ${bulkQuestion.question_number} in ${tallyPacketDesc} not found for tallying.`);
                             }
                         } else {
                             deleteBulkQuestion(serverId, bulkQuestion.question_id);
                             tallyEnd -= 1;
                         }
                     } catch (error: any) {
-                        console.log(`Question message (ID ${bulkQuestion.question_id}) for question ${bulkQuestion.question_number} in ${printPacketName(packetName)} - ${echoThread!.url} not found.`);
+                        console.log(`Question message (ID ${bulkQuestion.question_id}) for question ${bulkQuestion.question_number} in ${tallyPacketDesc} not found.`);
                         if (error.code === 10008) {
                             deleteBulkQuestion(serverId, bulkQuestion.question_id);
                             if (echoMessage) {
@@ -106,17 +107,17 @@ export default async function handleTally(serverId: string, packetName: string, 
                         tallyEnd -= 1;
                     }
                 } catch {
-                    console.log(`Echo message (ID ${bulkQuestion.echo_id} in thread ${echoThreadId}) for question ${bulkQuestion.question_number} in ${printPacketName(packetName)} - ${echoThread!.url} not found.`);
+                    console.log(`Echo message (ID ${bulkQuestion.echo_id} in thread ${echoThreadId}) for question ${bulkQuestion.question_number} in ${tallyPacketDesc} not found.`);
                 }
                 pluralString = (tallyEnd > 1 || tallyEnd == 0) ? "s" : "";
-                await tallyReply.edit(`Tallied reacts for ${tallyCount} of ${tallyEnd} question${pluralString} in [${printPacketName(packetName)}](${echoThread!.url}) ...`);
+                await tallyReply.edit(`Tallied reacts for ${tallyCount} of ${tallyEnd} question${pluralString} in ${tallyPacketDesc} ...`);
             }
             pluralString = (tallyEnd > 1 || tallyEnd == 0) ? "s" : "";
             if (tallyCount === tallyEnd) {
-                await tallyReply.edit(`Tallied reacts for ${tallyCount} question${pluralString} in [${printPacketName(packetName)}](${echoThread!.url}).`);
+                await tallyReply.edit(`Tallied reacts for ${tallyCount} question${pluralString} in ${tallyPacketDesc}.`);
             } else if (tallyCount < tallyEnd) {
-                tallyReply.edit(`Tallied reacts for ${tallyCount} of ${tallyEnd} question${pluralString} in [${printPacketName(packetName)}](${echoThread!.url}).`);
-                tallyReply.reply(`Errors in tallying ${tallyEnd - tallyCount} of ${tallyEnd} question${pluralString} in [${printPacketName(packetName)}](${echoThread!.url}).`);
+                tallyReply.edit(`Tallied reacts for ${tallyCount} of ${tallyEnd} question${pluralString} in ${tallyPacketDesc}.`);
+                tallyReply.reply(`Errors in tallying ${tallyEnd - tallyCount} of ${tallyEnd} question${pluralString} in ${tallyPacketDesc}.`);
             }
         } else {
             console.log(`Echo channel not found for server ${serverId}.`);

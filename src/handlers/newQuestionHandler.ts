@@ -47,7 +47,11 @@ async function handleThread(msgChannel: ServerChannel, message: Message, isBonus
 async function echoQuestion(question: string, echoChannelId: string, echoThreadId: string) {
     const echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
     const echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId);
-    return await echoThread!.send(question.replace("!t", "").trim());
+    if (echoThread) {
+        return await echoThread.send(question.replace("!t", "").trim());
+    } else {
+        return null;
+    }
 }
 
 async function handleReacts(message: Message, isBonus: boolean, parts: BonusPart[]) {
