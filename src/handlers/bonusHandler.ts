@@ -80,7 +80,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             let points_emoji_names: string[] = [];
             let partMessages: string[] = [];
             let totalPoints = 0;
-            let answer_emoji = (await getEmojiList(["answer"]))[0] || "answer:";
+            let answer_emoji = (getEmojiList(["answer"]))[0] || "answer:";
 
             results.forEach(async function (r: any, i: number) {
                 let answer = shortenAnswerline(userProgress.answers[i]);
@@ -106,7 +106,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
                 saveBonusDirect(userProgress.serverId, userProgress.questionId, userProgress.posterId, message.author.id, i + 1, r.points, r.note?.text || null, key);
             });
 
-            let emoji_summary = await getEmojiList(points_emoji_names);
+            let emoji_summary = getEmojiList(points_emoji_names);
 
             resultMessage += emoji_summary.join(" ");
             resultMessage += ` ${totalPoints} <@${message.author.id}> `;

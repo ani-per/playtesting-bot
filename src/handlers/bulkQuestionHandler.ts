@@ -42,13 +42,14 @@ export default async function handleTally(serverId: string, packetName: string, 
                                     }
                                     reacts = [
                                         ...reacts,
-                                        "tossup_10", "tossup_0",
+                                        "tossup_10",
+                                        // "tossup_0",
                                         "tossup_DNC",
                                         "tossup_neg5",
                                         // "tossup_FTP",
                                     ];
                                 }
-                                let react_emoji = await getEmojiList(reacts);
+                                let react_emoji = getEmojiList(reacts);
 
                                 let reactCounts: userReact[] = [];
                                 for await (const [_, react] of questionMessage.reactions.cache?.filter(react => react_emoji.includes(react.emoji.toString()) && react.count)) {
@@ -64,7 +65,7 @@ export default async function handleTally(serverId: string, packetName: string, 
                                 }
 
                                 if (reactCounts.some(userReact => userReact.count > 0)) {
-                                    let answer_emoji = (await getEmojiList(["answer"]))[0];
+                                    let answer_emoji = (getEmojiList(["answer"]))[0];
                                     let newEcho = "### [" +
                                         (bulkQuestion.question_type === "B" ? "Bonus " : "Tossup ") +
                                         (
@@ -78,7 +79,7 @@ export default async function handleTally(serverId: string, packetName: string, 
                                         "* " + ((answer_emoji + " ") || "") +
                                         `||${bulkQuestion.answers}||`;
 
-                                    let play_count_emoji = await getEmojiList(["play_count"]);
+                                    let play_count_emoji = getEmojiList(["play_count"]);
                                     let reactedUsers = [... new Set(reactCounts.map(userReact => [...userReact.users]).flat().filter(u => u != Number(client.user?.id)))];
                                     let playCount = reactedUsers.length > 0 ? reactedUsers.length : 1;
                                     newEcho += `\n* **${playCount}** × ${play_count_emoji} \t`;

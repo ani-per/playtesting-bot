@@ -110,14 +110,14 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
                 points_emoji_name = "tossup_neg5";
             }
         }
-        let points_emoji = await getEmojiList([points_emoji_name]);
+        let points_emoji = getEmojiList([points_emoji_name]);
 
         if (points_emoji) {
             resultMessage += `${points_emoji} `;
         }
         resultMessage += `<@${message.author.id}>`;
         if (!message.content.toLowerCase().startsWith("e")) {
-            let answer_emoji = (await getEmojiList(["answer"]))[0] || "answer:";
+            let answer_emoji = (getEmojiList(["answer"]))[0] || "answer:";
             resultMessage += ` @ "||${userProgress.questionParts[buzzIndex]}||"${note ? ` — ${answer_emoji} "||${sanitizedNote}||"` : ""}`;
         }
         resultMessage += userProgress.guesses?.length > 0 ? ` — thinking ${userProgress.guesses.map(g => `"||${g.guess}||" @ clue #${g.index + 1}`).join(", ")}` : "";

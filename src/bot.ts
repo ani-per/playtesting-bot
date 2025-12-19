@@ -30,21 +30,21 @@ const tallyCommands = [
 const deleteCommands = ["delete", "purge"];
 
 const helpEmbed = new EmbedBuilder()
-	.setColor(0x0099FF)
-	.setTitle("Overview")
-	.setURL("https://github.com/ani-per/playtesting-bot")
-	.setAuthor({ name: "Playtesting Bot", url: "https://github.com/ani-per/playtesting-bot" })
-	.setDescription([
+    .setColor(0x0099FF)
+    .setTitle("Overview")
+    .setURL("https://github.com/ani-per/playtesting-bot")
+    .setAuthor({ name: "Playtesting Bot", url: "https://github.com/ani-per/playtesting-bot" })
+    .setDescription([
         "* [README](https://github.com/ani-per/playtesting-bot/blob/main/README.md)",
         "* [Instructions for Editors](https://gist.github.com/acfquizbowl/7983064671e257b15de96547ef192129#instructions-for-editors)",
         "* [Instructions for Playtesters](https://gist.github.com/acfquizbowl/7983064671e257b15de96547ef192129#instructions-for-playtesters)",
         "* [Paster Dingus](https://minkowski.space/quizbowl/paster/)",
         "* [File an issue on GitHub](https://github.com/JemCasey/playtesting-bot/issues)",
-        ].join("\n")
+    ].join("\n")
     )
-	.addFields(
-		{ name: "Bot Configuration", value: "`!config`" },
-		{
+    .addFields(
+        { name: "Bot Configuration", value: "`!config`" },
+        {
             name: "Bulk Playtesting Commands",
             value: [
                 "* `!start X`/`!read X`/`!begin X` - Begin reading packet `X`",
@@ -55,8 +55,8 @@ const helpEmbed = new EmbedBuilder()
                 "* `!tally X` - Tally reacts for packet `X`",
             ].join("\n"),
         },
-	)
-	.setTimestamp();
+    )
+    .setTimestamp();
 
 export const client = new Client({
     intents: [
@@ -77,8 +77,11 @@ export const client = new Client({
     }
 });
 
-client.once(Events.ClientReady, readyClient => {
-    console.log(`Logged in as ${readyClient.user.tag}`);
+client.once(Events.ClientReady, async (client) => {
+    let emojis = await client?.application?.emojis.fetch();
+    console.log(`Logged in as ${client.user.tag} with ${emojis.size} application emojis.`);
+    let emojiList = emojis.map(e => `\t${e.name}`).join("\n");
+    // console.log(emojiList);
 });
 
 client.on("messageCreate", async (message) => {

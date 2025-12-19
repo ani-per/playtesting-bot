@@ -67,14 +67,15 @@ async function handleReacts(message: Message, isBonus: boolean, parts: BonusPart
         }
         reacts = [
             ...reacts,
-            "tossup_10", "tossup_0",
+            "tossup_10",
+            // "tossup_0",
             "tossup_DNC",
             "tossup_neg5",
             // "tossup_FTP",
         ];
     }
 
-    await reactEmojiList(message, reacts);
+    reactEmojiList(message, reacts);
 }
 
 export default async function handleNewQuestion(message: Message<boolean>) {
@@ -130,8 +131,10 @@ export default async function handleNewQuestion(message: Message<boolean>) {
             questionNumber = getQuestionNumber(question);
 
             // if a tossup was sent that has 2 or fewer spoiler tagged sections, assume that it's not meant to be played
-            if (tossupParts.length <= 2)
+            if (tossupParts.length <= 2) {
+                message.reply("The pasted tossup doesn't seem to be properly spoiler-tagged. Try again using the [paster dingus](https://minkowski.space/quizbowl/paster/) to auto-format the tossup.");
                 return;
+            }
 
             if (msgChannel.channel_type === 2) {
                 await handleReacts(message, !!bonusMatch, difficulties);
@@ -149,7 +152,7 @@ export default async function handleNewQuestion(message: Message<boolean>) {
                 const echoChannelId = playtestingChannels.find(c => (c.channel_type === 3))?.channel_id;
                 if (echoChannelId) {
                     const echoThreadId = getEchoThreadId(serverId, echoChannelId, packetName);
-                    let answer_emoji = (await getEmojiList(["answer"]))[0];
+                    let answer_emoji = (getEmojiList(["answer"]))[0];
                     questionEcho = "### [" +
                         (!!bonusMatch ? "Bonus " : "Tossup ") +
                         (
@@ -185,6 +188,10 @@ export default async function handleNewQuestion(message: Message<boolean>) {
                                 {label: "Go to Index", id: "", url: echoMessage?.url || ""},
                             ]));
                         };
+                    } else if (!message.content.includes("!t")) {
+                        message.reply(buildButtonMessage([
+                            {label: "Create Discussion Thread", id: "bulk_thread", url: ""}
+                        ]));
                     }
                 }
             } else if (msgChannel.channel_type === 1) {
