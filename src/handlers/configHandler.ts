@@ -5,8 +5,8 @@ import { saveAsyncServerChannelsFromMessage, saveBulkServerChannelsFromMessage, 
 export default async function handleConfig(message: Message<boolean>) {
     const msgChannel = (await message.channel.fetch() as TextChannel);
 
-    await msgChannel.send("List the channels used for **internal, asynchronous playtesting** - where the results should be saved to a separate channel.\nList channels in the form: `#testing-channel-1/#results-channel-1 #testing-channel-2/#results-channel-2`.");
-    await msgChannel.send("To bypass asynchronous playtesting channels, type `#/#`.\nMake sure to add _exactly one space_ between each set of testing and results channels.\nNote that multiple playtesting channels can share a `results-channel`.");
+    await msgChannel.send("List the channels used for **internal, asynchronous playtesting** - where the results should be saved to a separate channel.\nList channels in the form: `#testing-channel-1 / #results-channel-1 #testing-channel-2 / #results-channel-2`.");
+    await msgChannel.send("To bypass asynchronous playtesting channels, type `#/#`.\nNote that multiple playtesting channels can share a `results-channel`.");
 
     try {
         let filter = (m: Message<boolean>) => m.author.id === message.author.id
@@ -29,7 +29,7 @@ export default async function handleConfig(message: Message<boolean>) {
         }
 
         await msgChannel.send("List the channels used for **bulk playtesting** - where playtesters will use reacts to indicate their performance.\nUse the form: `#testing-channel-1 #testing-channel-2`.");
-        await msgChannel.send("To bypass bulk playtesting channels, type `#`.\nMake sure to add _exactly one space_ between each channel.\nAsynchronous playtesting channels cannot be bulk playtesting channels.");
+        await msgChannel.send("To bypass bulk playtesting channels, type `#`.\nAsynchronous playtesting channels cannot be bulk playtesting channels.");
 
         try {
             let filter = (m: Message<boolean>) => m.author.id === message.author.id
@@ -57,7 +57,8 @@ export default async function handleConfig(message: Message<boolean>) {
                     await msgChannel.send(`Successfully saved ${echo_channel.join(", ")} as the echo channel.`);
 
                     insertServerSettingCommand.run(message.guildId!, "");
-                } catch {
+                } catch (err) {
+                    console.log("Error in echo channel config: " + err);
                     await msgChannel.send("An error occurred, please try again.");
                 }
 
@@ -65,10 +66,12 @@ export default async function handleConfig(message: Message<boolean>) {
             } else {
                 await msgChannel.send("Configuration finished.");
             }
-        } catch {
+        } catch (err) {
+            console.log("Error in bulk channel config: " + err);
             await msgChannel.send("An error occurred, please try again.");
         }
-    } catch {
+    } catch (err) {
+        console.log("Error in async channel config: " + err);
         await msgChannel.send("An error occurred, please try again.");
     }
 }

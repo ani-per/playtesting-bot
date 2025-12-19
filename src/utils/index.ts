@@ -1,6 +1,6 @@
 import {
     ActionRowBuilder, BaseMessageOptions, ButtonBuilder, ButtonStyle, Collection, EmbedBuilder,
-    Guild, Message, MessageCreateOptions, MessageFlags, PublicThreadChannel, TextChannel, TextThreadChannel
+    Guild, Message, MessageCreateOptions, MessageFlags, PublicThreadChannel, TextChannel, TextThreadChannel, ChannelType
 } from "discord.js";
 import Database from 'better-sqlite3';
 import { encrypt } from "./crypto";
@@ -262,42 +262,104 @@ export const saveBonusDirect = (serverId: string, questionId: string, posterId: 
 }
 
 export const saveAsyncServerChannelsFromMessage = (collected: Collection<string, Message<boolean>>, server: Guild) => {
-    let tags = collected?.first()?.content.split(' ') || [];
+    let message = collected?.first();
+    let taggedChannels = message?.mentions.channels;
+    let tags = message?.content.match(/<#(\d+)>\s*\/\s*<#(\d+)>/g) || [];
     let currentServerChannels = getServerChannels(server?.id);
 
     let saved_channels: string[] = [];
+    let missed_question_channels: string[] = [];
+    let missed_results_channels: string[] = [];
     tags.forEach((tag) => {
-        const [_, channelId, resultsChannelId] = tag.match(/<#(\d+)>\s*\/\s*<#(\d+)>/) || [];
-        const channel = server.channels.cache.find((channel) => channel.id === channelId);
-        const resultsChannel = server.channels.cache.find((channel) => channel.id === resultsChannelId);
+        const configMatches = tag.matchAll(/<#(\d+)>/g);
+        const configChannels: string[] = Array.from(configMatches, m => m[1]);
+        if (configChannels.length === 2) {
+            const questionChannelId = configChannels[0];
+            const resultsChannelId = configChannels[1];
 
-        if (channel?.id && resultsChannel?.id) {
-            if (!currentServerChannels.map(s => s.channel_id).includes(channelId)) { // Avoid duplicate channels
-                insertServerChannelCommand.run(server.id, channelId, resultsChannelId, 1);
-                saved_channels.push(`\`${channel.name}\``);
+            const questionChannel = server.channels.cache.find((channel) => channel.id === questionChannelId);
+            const resultsChannel = server.channels.cache.find((channel) => channel.id === resultsChannelId);
+
+            if (questionChannel?.id && resultsChannel?.id) {
+                if (questionChannel?.id === resultsChannel?.id) {
+                    const questionChannelName: string = (
+                        taggedChannels?.filter(
+                            c => c.type === ChannelType.GuildText
+                        )?.find(
+                            c => c.id === questionChannelId
+                        ) as TextChannel
+                    ).name;
+                    message?.reply(`The results channel for question channel ${questionChannelName || questionChannelId} is the same as the question channel. Please provide a different channel as the results channel for question channel ${questionChannelName || questionChannelId}.`);
+                }
+                if (!currentServerChannels.map(s => s.channel_id).includes(questionChannelId)) { // Avoid duplicate channels
+                    insertServerChannelCommand.run(server.id, questionChannelId, resultsChannelId, 1);
+                    saved_channels.push(`\`${questionChannel.name}\``);
+                }
+            } else {
+                if (!questionChannel?.id) {
+                    missed_question_channels.push(questionChannelId);
+                }
+                if (!resultsChannel?.id) {
+                    missed_results_channels.push(resultsChannelId);
+                }
             }
+        } else if (configChannels.length === 1) {
+            const questionChannelId = configChannels[0];
+            const questionChannelName: string = (
+                taggedChannels?.filter(
+                    c => c.type === ChannelType.GuildText
+                )?.find(
+                    c => c.id === questionChannelId
+                ) as TextChannel
+            ).name;
+            message?.reply(`Question channel ${questionChannelName || configChannels[0]} is missing a results channel.\nProvide its results channel like so: \`#testing-channel / #results-channel\`.`);
+        } else {
+            message?.reply(`Couldn't detect at least one of the channels for the pair ${tag}.`);
         }
     });
+
+    if (missed_question_channels.length > 0) {
+        message?.reply(`Couldn't find these question channels: ${missed_question_channels.join(", ")}.`);
+    }
+    if (missed_results_channels.length > 0) {
+        message?.reply(`Couldn't find these results channels: ${missed_results_channels.join(", ")}.`);
+    }
 
     return saved_channels;
 }
 
 export const saveBulkServerChannelsFromMessage = (collected: Collection<string, Message<boolean>>, server: Guild, channel_type: number) => {
-    let tags = collected?.first()?.content.split(' ') || [];
+    let message = collected?.first();
+    let taggedChannels = message?.mentions.channels;
+    let tags = message?.content.match(/<#(\d+)>/g) || [];
     let currentServerChannels = getServerChannels(server?.id);
 
     let saved_channels: string[] = [];
+    let missed_channels: string[] = [];
     tags.forEach(function (tag) {
-        const [_, channelId] = tag.match(/<#(\d+)>/) || [];
-        const channel = server.channels.cache.find((channel) => channel.id === channelId);
+        const [_, bulkChannelId] = tag.match(/<#(\d+)>/) || [];
+        const bulkChannel = server.channels.cache.find((channel) => channel.id === bulkChannelId);
 
-        if (channel?.id) {
-            if (!currentServerChannels.map(s => s.channel_id).includes(channelId)) { // Avoid duplicate channels
-                insertServerChannelCommand.run(server.id, channelId, "", channel_type);
-                saved_channels.push(`\`${channel.name}\``);
+        if (bulkChannel?.id) {
+            if (!currentServerChannels.map(s => s.channel_id).includes(bulkChannelId)) { // Avoid duplicate channels
+                insertServerChannelCommand.run(server.id, bulkChannelId, "", channel_type);
+                saved_channels.push(`\`${bulkChannel.name}\``);
             }
+        } else {
+            const bulkChannelName: string = (
+                taggedChannels?.filter(
+                    c => c.type === ChannelType.GuildText
+                )?.find(
+                    c => c.id === bulkChannelId
+                ) as TextChannel
+            ).name;
+            missed_channels.push(bulkChannelName || bulkChannelId);
         }
     });
+
+    if (missed_channels.length > 0) {
+        message?.reply(`Couldn't find these bulk channels: ${missed_channels.join(", ")}.`);
+    }
 
     return saved_channels;
 }
@@ -468,7 +530,7 @@ export async function getTossupSummary(questionId: string, questionParts: string
     let point_values: number[] = [15, 10, 0, -5];
     let points_emoji_names: string[] = ["15", "10", "DNC", "neg5"];
     points_emoji_names = points_emoji_names.map(i => "tossup_" + i);
-    let points_emojis = await getEmojiList(points_emoji_names);
+    let points_emojis = getEmojiList(points_emoji_names);
 
     groupedBuzzes.forEach(async function (buzzpoint) {
         let cumulativeCharacters = questionParts.slice(0, buzzpoint.index + 1).join("").length;
@@ -512,7 +574,7 @@ export async function getBonusSummary(questionId: string, questionUrl: string) {
 
     let points_emoji_names: string[] = ["E", "M", "H"];
     points_emoji_names = points_emoji_names.map(i => "bonus_" + i);
-    let points_emojis = await getEmojiList(points_emoji_names);
+    let points_emojis = getEmojiList(points_emoji_names);
 
     return `## Results\n**Plays**: ${bonusSummary.total_plays}\t` +
         `**PPB**: ${bonusSummary.ppb.toFixed(2)}\t` +
