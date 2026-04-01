@@ -37,7 +37,7 @@ export default async function handleTally(serverId: string, packetName: string, 
                                 if (bulkQuestion.question_type === "B") {
                                     reacts = [...reacts, "bonus_E", "bonus_M", "bonus_H", "bonus_0"];
                                 } else {
-                                    if (powerMarks.some(s => message.content.includes(s))) {
+                                    if (powerMarks.some(s => questionMessage.content.includes(s))) {
                                         reacts = [...reacts, "tossup_15"];
                                     }
                                     reacts = [
