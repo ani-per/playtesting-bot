@@ -1,5 +1,5 @@
 import { Message, TextChannel, TextThreadChannel } from "discord.js";
-import { getServerChannels, getBulkQuestionsInPacket, formatPercent, getEchoThreadId, printPacketName, deleteBulkQuestion } from "src/utils";
+import { powerMarks, getServerChannels, getBulkQuestionsInPacket, formatPercent, getEchoThreadId, printPacketName, deleteBulkQuestion } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList } from "src/utils/emojis";
 
@@ -37,7 +37,7 @@ export default async function handleTally(serverId: string, packetName: string, 
                                 if (bulkQuestion.question_type === "B") {
                                     reacts = [...reacts, "bonus_E", "bonus_M", "bonus_H", "bonus_0"];
                                 } else {
-                                    if (questionMessage.content.includes("\(\*\)")) {
+                                    if (powerMarks.some(s => message.content.includes(s))) {
                                         reacts = [...reacts, "tossup_15"];
                                     }
                                     reacts = [
@@ -70,8 +70,8 @@ export default async function handleTally(serverId: string, packetName: string, 
                                         (bulkQuestion.question_type === "B" ? "Bonus " : "Tossup ") +
                                         (
                                             bulkQuestion.question_number ?
-                                            (bulkQuestion.question_number + " ")
-                                            : ""
+                                                (bulkQuestion.question_number + " ")
+                                                : ""
                                         ) +
                                         "- " +
                                         bulkQuestion.category +
@@ -84,7 +84,7 @@ export default async function handleTally(serverId: string, packetName: string, 
                                     let playCount = reactedUsers.length > 0 ? reactedUsers.length : 1;
                                     newEcho += `\n* **${playCount}** × ${play_count_emoji} \t`;
                                     newEcho += reactCounts.map(userReact =>
-                                        `**${userReact.count}** × ${userReact.emoji} (${formatPercent(userReact.count/playCount)})`
+                                        `**${userReact.count}** × ${userReact.emoji} (${formatPercent(userReact.count / playCount)})`
                                     ).join("\t");
 
                                     echoMessage.edit(newEcho);

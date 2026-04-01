@@ -1,7 +1,7 @@
 import { Message, Application, TextChannel } from "discord.js";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
-import { buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate } from "src/utils";
+import { powerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList, reactEmojiList } from "src/utils/emojis";
 
@@ -16,8 +16,7 @@ async function handleThread(msgChannel: ServerChannel, message: Message, isBonus
 
     if (msgChannel.channel_type === 2) {
         threadName = metadata ?
-            `${
-                thisServerSetting?.packet_name ?
+            `${thisServerSetting?.packet_name ?
                 abbreviate(thisServerSetting?.packet_name) + "." :
                 ""
             }${isBonus ? "B" : "T"}${questionNumber} | ${categoryName} | ${fallbackName}` :
@@ -62,7 +61,7 @@ async function handleReacts(message: Message, isBonus: boolean, parts: BonusPart
         }
         reacts = [...reacts, "bonus_0"];
     } else {
-        if (message.content.includes("(\\*)") || message.content.includes("\(\*\)")) {
+        if (powerMarks.some(s => message.content.includes(s))) {
             reacts = [...reacts, "tossup_15"];
         }
         reacts = [
@@ -157,8 +156,8 @@ export default async function handleNewQuestion(message: Message<boolean>) {
                         (!!bonusMatch ? "Bonus " : "Tossup ") +
                         (
                             isNumeric(questionNumber) ?
-                            (questionNumber + " ") :
-                            ""
+                                (questionNumber + " ") :
+                                ""
                         ) +
                         "- " +
                         getCategoryName(threadMetadata) +
@@ -180,17 +179,17 @@ export default async function handleNewQuestion(message: Message<boolean>) {
                         );
                         if (message.content.includes("!t")) {
                             message.reply(buildButtonMessage([
-                                {label: "Go to Index", id: "echo", url: echoMessage?.url || ""}
+                                { label: "Go to Index", id: "echo", url: echoMessage?.url || "" }
                             ]));
                         } else {
                             message.reply(buildButtonMessage([
-                                {label: "Create Discussion Thread", id: "bulk_thread", url: ""},
-                                {label: "Go to Index", id: "", url: echoMessage?.url || ""},
+                                { label: "Create Discussion Thread", id: "bulk_thread", url: "" },
+                                { label: "Go to Index", id: "", url: echoMessage?.url || "" },
                             ]));
                         };
                     } else if (!message.content.includes("!t")) {
                         message.reply(buildButtonMessage([
-                            {label: "Create Discussion Thread", id: "bulk_thread", url: ""}
+                            { label: "Create Discussion Thread", id: "bulk_thread", url: "" }
                         ]));
                     }
                 }
@@ -198,17 +197,17 @@ export default async function handleNewQuestion(message: Message<boolean>) {
                 const buttonLabel = "Play " + (!!bonusMatch ? "Bonus" : "Tossup");
                 if (message.content.includes("!t")) {
                     message.reply(buildButtonMessage([
-                        {label: buttonLabel, id: "play_question", url: ""},
+                        { label: buttonLabel, id: "play_question", url: "" },
                     ]));
                 } else {
                     message.reply(buildButtonMessage([
-                        {label: "Create Discussion Thread", id: "async_thread", url: ""},
-                        {label: buttonLabel, id: "play_question", url: ""},
+                        { label: "Create Discussion Thread", id: "async_thread", url: "" },
+                        { label: buttonLabel, id: "play_question", url: "" },
                     ]));
                 }
             }
             if (message.content.includes("!t")) {
-                await handleThread(msgChannel, message, !!bonusMatch, threadQuestionText, threadMetadata, isNumeric(questionNumber) ? questionNumber: "");
+                await handleThread(msgChannel, message, !!bonusMatch, threadQuestionText, threadMetadata, isNumeric(questionNumber) ? questionNumber : "");
             }
         }
     }

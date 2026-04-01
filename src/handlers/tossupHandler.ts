@@ -1,7 +1,7 @@
 import { Client, Message, TextChannel } from "discord.js";
 import { asyncCharLimit } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
-import { UserTossupProgress, cleanThreadName, getEmbeddedMessage, getServerChannels, getSilentMessage, getResultsThreadAndUpdateSummary, getToFirstIndicator, removeQuestionNumber, removeSpoilers, saveBuzz, shortenAnswerline, stripFormatting } from "src/utils";
+import { powerMarks, UserTossupProgress, cleanThreadName, getEmbeddedMessage, getServerChannels, getSilentMessage, getResultsThreadAndUpdateSummary, getToFirstIndicator, removeQuestionNumber, removeSpoilers, saveBuzz, shortenAnswerline, stripFormatting } from "src/utils";
 import { getEmojiList } from "src/utils/emojis";
 
 export default async function handleTossupPlaytest(message: Message<boolean>, client: Client<boolean>, userProgress: UserTossupProgress, setUserProgress: (key: string, value: UserTossupProgress) => void, deleteUserProgress: (key: any) => void) {
@@ -73,8 +73,8 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
         let buzzIndex = userProgress.index >= userProgress.questionParts.length ? userProgress.questionParts.length - 1 : userProgress.index;
         let value = 0;
         if (message.content.toLowerCase().startsWith("y")) {
-            if (userProgress.questionParts.some(part => part.includes("\(\*\)"))) {
-                if (buzzIndex < userProgress.questionParts.findIndex(part => part.includes("\(\*\)"))) {
+            if (userProgress.questionParts.some(part => powerMarks.some(s => part.includes(s)))) {
+                if (buzzIndex < userProgress.questionParts.findIndex(part => powerMarks.some(s => part.includes(s)))) {
                     value = 15;
                 } else {
                     value = 10;

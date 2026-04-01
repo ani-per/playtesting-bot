@@ -43,10 +43,12 @@ const getEchoSettingsQuery = db.prepare('SELECT * FROM echo WHERE server_id = ? 
 
 const literature_names = ["literature", "lit", "drama", "poetry", "fiction"];
 const history_names = ["history", "historiography", "archeology"];
-const rmpss_names = ["religion", "myth", "phil", "social", "econ", "psych", "ling", "socio", "anthro", "law"]
+const rmpss_names = ["religion", "myth", "phil", "social", "econ", "psych", "ling", "socio", "anthro", "law", "belief"]
 const arts_names = ["arts", "fine", "paint", "sculpt", "music", "classical", "auditory", "visual", "architecture", "photo", "film", "jazz", "opera", "dance"];
 const science_names = ["science", "bio", "chem", "physics", "math", "astro", "computer", "earth", "engineering", "ecology"];
 const other_names = ["other", "academic", "geography", "current", "events", "pop", "culture", "trash"];
+
+export const powerMarks = ["(\\*)", "\(\*\)"];
 
 type nullableString = string | null | undefined;
 
@@ -555,7 +557,7 @@ export async function getTossupSummary(questionId: string, questionParts: string
     });
 
     tossupSummary += `**Plays**: ${buzzes.length}\t`;
-    if (questionParts.some(part => part.includes("\(\*\)")) && powers) {
+    if (questionParts.some(part => powerMarks.some(s => part.includes(s))) && powers) {
         tossupSummary +=
             `**Power Rate**: ${formatPercent(powers.length / buzzes.length)}\t`;
     }
