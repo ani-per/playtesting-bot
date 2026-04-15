@@ -6,7 +6,7 @@ import Database from 'better-sqlite3';
 import { encrypt } from "./crypto";
 import { sum, group, listify } from 'radash'
 import { getBonusSummaryData } from "./queries";
-import { getEmojiList } from "src/utils/emojis";
+import { pointsEmojiList } from "src/utils/emojis";
 
 const db = new Database('database.db');
 
@@ -48,7 +48,9 @@ const arts_names = ["arts", "fine", "paint", "sculpt", "music", "classical", "au
 const science_names = ["science", "bio", "chem", "physics", "math", "astro", "computer", "earth", "engineering", "ecology"];
 const other_names = ["other", "academic", "geography", "current", "events", "pop", "culture", "trash"];
 
+export const point_values: number[] = [20, 15, 10, 0, -5];
 export const powerMarks = ["(\\*)", "\(\*\)"];
+export const superPowerMarks = ["(\\+)", "\(\+\)"];
 
 type nullableString = string | null | undefined;
 
@@ -521,7 +523,8 @@ export async function getTossupSummary(questionId: string, questionParts: string
     let tossupSummary = `## Results\n` +
         `### ANSWER: ||${shortenAnswerline(answer)}||\n`;
     const buzzes = getTossupBuzzesQuery.all(questionId) as any[];
-    const powers = buzzes.filter(b => b.value > 10);
+    const superPowers = buzzes.filter(b => b.value == 20);
+    const powers = buzzes.filter(b => b.value == 15);
     const gets = buzzes.filter(b => b.value > 0);
     const negs = buzzes.filter(b => b.value < 0);
     const groupedBuzzes = listify(group(buzzes, b => b.clue_index), (key, value) => ({
@@ -529,10 +532,7 @@ export async function getTossupSummary(questionId: string, questionParts: string
         buzzes: value
     }));
     const totalCharacters = questionParts.join("").length;
-    let point_values: number[] = [15, 10, 0, -5];
-    let points_emoji_names: string[] = ["15", "10", "DNC", "neg5"];
-    points_emoji_names = points_emoji_names.map(i => "tossup_" + i);
-    let points_emojis = getEmojiList(points_emoji_names);
+    let points_emojis = pointsEmojiList(true);
 
     groupedBuzzes.forEach(async function (buzzpoint) {
         let cumulativeCharacters = questionParts.slice(0, buzzpoint.index + 1).join("").length;
@@ -557,6 +557,10 @@ export async function getTossupSummary(questionId: string, questionParts: string
     });
 
     tossupSummary += `**Plays**: ${buzzes.length}\t`;
+    if (questionParts.some(part => superPowerMarks.some(s => part.includes(s))) && superPowers) {
+        tossupSummary +=
+            `**Superpower Rate**: ${formatPercent(superPowers.length / buzzes.length)}\t`;
+    }
     if (questionParts.some(part => powerMarks.some(s => part.includes(s))) && powers) {
         tossupSummary +=
             `**Power Rate**: ${formatPercent(powers.length / buzzes.length)}\t`;
@@ -573,10 +577,7 @@ export async function getTossupSummary(questionId: string, questionParts: string
 
 export async function getBonusSummary(questionId: string, questionUrl: string) {
     const bonusSummary = getBonusSummaryData(questionId) as any;
-
-    let points_emoji_names: string[] = ["E", "M", "H"];
-    points_emoji_names = points_emoji_names.map(i => "bonus_" + i);
-    let points_emojis = getEmojiList(points_emoji_names);
+    let points_emojis = pointsEmojiList(false);
 
     return `## Results\n**Plays**: ${bonusSummary.total_plays}\t` +
         `**PPB**: ${bonusSummary.ppb.toFixed(2)}\t` +

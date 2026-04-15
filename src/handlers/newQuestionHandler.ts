@@ -1,7 +1,7 @@
 import { Message, Application, TextChannel } from "discord.js";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
-import { powerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate } from "src/utils";
+import { powerMarks, superPowerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList, reactEmojiList } from "src/utils/emojis";
 
@@ -61,6 +61,9 @@ async function handleReacts(message: Message, isBonus: boolean, parts: BonusPart
         }
         reacts = [...reacts, "bonus_0"];
     } else {
+        if (superPowerMarks.some(s => message.content.includes(s))) {
+            reacts = [...reacts, "tossup_20"];
+        }
         if (powerMarks.some(s => message.content.includes(s))) {
             reacts = [...reacts, "tossup_15"];
         }

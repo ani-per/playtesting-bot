@@ -107,6 +107,7 @@ To play [an asynchronous question that has been detected by the bot](./examples/
 * [For each question in the packet to be playtested](./examples/bulk.png), paste the spoiler-tagged question in any of the bulk playtesting channels. Just like in asynchronous playtesting, adding `!t` to the question content will auto-create a discussion thread.
   * The bot will auto-react to the question message with a set of reacts depending on if it's a tossup or bonus:
     * Tossups
+      * 20 points - `:tossup_20:` (if the tossup is superpowermarked with `(+)`)
       * 15 points - `:tossup_15:` (if the tossup is powermarked with `(*)`)
       * 10 points - `:tossup_10:`
       * DNC (did not convert) - `:tossup_DNC:`

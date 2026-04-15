@@ -21,6 +21,18 @@ export function getEmojiList(emoji_names: string[]) {
     return emoji_list;
 }
 
+export const pointsEmojiList = (isTossup: boolean) => {
+    if (isTossup) {
+        let points_emoji_names: string[] = ["20", "15", "10", "DNC", "neg5"];
+        points_emoji_names = points_emoji_names.map(i => "tossup_" + i);
+        return getEmojiList(points_emoji_names);
+    } else {
+        let points_emoji_names: string[] = ["E", "M", "H"];
+        points_emoji_names = points_emoji_names.map(i => "bonus_" + i);
+        return getEmojiList(points_emoji_names);
+    }
+}
+
 export function reactEmojiList(message: Message, emoji_names: string[]) {
     emoji_names.forEach(function (emoji_name: string) {
         try {
