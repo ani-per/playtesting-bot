@@ -57,6 +57,7 @@ type nullableString = string | null | undefined;
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const removeSpoilers = (text: string) => text?.replaceAll("||", "").trim() || "";
 export const shortenAnswerline = (answerline: string) => removeSpoilers(answerline.replaceAll("`", "").replaceAll(/ \[.+\]/g, "").replaceAll(/ \(.+\)/g, "")).trim();
+export const removeMentions = (text: string) => text.replaceAll(/\B@\w+\b/g, "").replaceAll(/<@!?(\d+)>/g, "").replaceAll(/<#(\d+)>/g, "").replaceAll(/<@&(\d+)>/g, "").trim();
 export const removeBonusValue = (bonusPart: string) => bonusPart.replace(/\|{0,2}\[10\|{0,2}[emh]?\|{0,2}]\|{0,2} ?/, "");
 export const formatPercent = (value: number | null | undefined, minimumIntegerDigits: number | undefined = undefined, minimumFractionDigits: number = 0) => value == null || value == undefined ? "" : value.toLocaleString(undefined, { style: 'percent', minimumFractionDigits, minimumIntegerDigits });
 export const formatDecimal = (value: number | null | undefined, fractionDigits: number = 0) => value == null || value == undefined ? "" : value?.toFixed(fractionDigits);

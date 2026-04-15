@@ -1,7 +1,7 @@
 import { Message, Application, TextChannel } from "discord.js";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
-import { powerMarks, superPowerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate } from "src/utils";
+import { powerMarks, superPowerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate, removeMentions } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList, reactEmojiList } from "src/utils/emojis";
 
@@ -101,10 +101,11 @@ export default async function handleNewQuestion(message: Message<boolean>) {
         let answersEcho: string[] = [];
 
         if (bonusMatch) {
-            const [_, leadin, part1, answer1, part2, answer2, part3, answer3, metadata, difficultyPart1, difficultyPart2, difficultyPart3] = bonusMatch;
+            let [_, leadin, part1, answer1, part2, answer2, part3, answer3, metadata, difficultyPart1, difficultyPart2, difficultyPart3] = bonusMatch;
             const difficulty1Match = part1.match(BONUS_DIFFICULTY_REGEX) || [];
             const difficulty2Match = part2.match(BONUS_DIFFICULTY_REGEX) || [];
             const difficulty3Match = part3.match(BONUS_DIFFICULTY_REGEX) || [];
+            leadin = removeMentions(leadin);
             threadQuestionText = leadin;
             threadMetadata = removeSpoilers(metadata);
             questionNumber = getQuestionNumber(leadin);
@@ -123,11 +124,12 @@ export default async function handleNewQuestion(message: Message<boolean>) {
             answersEcho.push(shortenAnswerline(answer2));
             answersEcho.push(shortenAnswerline(answer3));
         } else if (tossupMatch) {
-            const [_, question, answer, metadata] = tossupMatch;
+            let [_, question, answer, metadata] = tossupMatch;
             const tossupParts = getTossupParts(question);
             const questionLength = tossupParts.reduce((a, b) => {
                 return a + b.length;
             }, 0);
+            question = removeMentions(question);
             threadQuestionText = question;
             threadMetadata = removeSpoilers(metadata);
             questionNumber = getQuestionNumber(question);

@@ -1,7 +1,7 @@
 import { Interaction, TextChannel } from "discord.js";
 import { client } from "src/bot";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
-import { buildButtonMessage, QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getEmbeddedMessage, getTossupParts, getToFirstIndicator, removeBonusValue, removeSpoilers, getCategoryName, getCategoryRole, isNumeric, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, getAuthorName, cleanThreadName, getCategoryCount, getResultsThreadId, getServerChannels, stripFormatting, abbreviate } from "src/utils";
+import { buildButtonMessage, QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getEmbeddedMessage, getTossupParts, getToFirstIndicator, removeBonusValue, removeSpoilers, getCategoryName, getCategoryRole, isNumeric, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, getAuthorName, cleanThreadName, getCategoryCount, getResultsThreadId, getServerChannels, stripFormatting, abbreviate, removeMentions } from "src/utils";
 
 export default async function handleButtonClick(interaction: Interaction, userProgress: Map<string, UserProgress>, setUserProgress: (key: any, value: any) => void) {
     if (interaction.isButton() && interaction.customId === "play_question") {
@@ -16,7 +16,8 @@ export default async function handleButtonClick(interaction: Interaction, userPr
             if (userProgress.get(interaction.user.id)) {
                 await interaction.user.send(getEmbeddedMessage("You tried to start playtesting a question but have a different question reading in progress. Please complete that reading or type `x` to end it, then try again."));
             } else if (bonusMatch) {
-                const [_, leadin, part1, answer1, part2, answer2, part3, answer3, metadata, difficultyPart1, difficultyPart2, difficultyPart3] = bonusMatch;
+                let [_, leadin, part1, answer1, part2, answer2, part3, answer3, metadata, difficultyPart1, difficultyPart2, difficultyPart3] = bonusMatch;
+                leadin = removeMentions(leadin);
                 const difficulty1Match = part1.match(BONUS_DIFFICULTY_REGEX) || [];
                 const difficulty2Match = part2.match(BONUS_DIFFICULTY_REGEX) || [];
                 const difficulty3Match = part3.match(BONUS_DIFFICULTY_REGEX) || [];
@@ -55,7 +56,8 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                 let firstPart = removeSpoilers(leadin) + "\n[10] " + removeSpoilers(removeBonusValue(part1));
                 await interaction.user.send(firstPart);
             } else if (tossupMatch) {
-                const [_, question, answer, metadata] = tossupMatch;
+                let [_, question, answer, metadata] = tossupMatch;
+                question = removeMentions(question);
                 const questionParts = getTossupParts(question);
                 const authorName = getAuthorName(metadata) ?? posterName;
 
@@ -111,6 +113,7 @@ export default async function handleButtonClick(interaction: Interaction, userPr
 
             if (bonusMatch) {
                 let [_, leadin, part1, answer1, part2, answer2, part3, answer3, metadata, difficultyPart1, difficultyPart2, difficultyPart3] = bonusMatch;
+                leadin = removeMentions(leadin);
                 questionNumber = getQuestionNumber(leadin);
                 metadata = removeSpoilers(metadata);
 
