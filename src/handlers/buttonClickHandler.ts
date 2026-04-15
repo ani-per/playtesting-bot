@@ -81,6 +81,7 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                         [
                             "Here's your tossup! Type:",
                             "* `b` — buzz on the current clue",
+                            "* `n` — proceed to the next clue",
                             "* `u` — undo and go back to the previous part",
                             "* `e` — end tossup without providing an answer",
                             "* `x` — exit reading without sharing results",
