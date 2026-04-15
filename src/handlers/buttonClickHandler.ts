@@ -47,7 +47,7 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                     [
                         "Here's your bonus! Type:",
                         "* `d` — direct an answer to the current part",
-                        "* `p` - pass without directing a guess",
+                        "* `p` — pass without directing a guess",
                         "* `u` — undo and go back to the previous part",
                         "* `x` — exit reading without sharing results"
                     ].join("\n")

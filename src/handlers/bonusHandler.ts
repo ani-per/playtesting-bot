@@ -109,7 +109,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             let emoji_summary = getEmojiList(points_emoji_names);
 
             resultMessage += emoji_summary.join(" ");
-            resultMessage += ` ${totalPoints} <@${message.author.id}> `;
+            resultMessage += ` **${totalPoints}** <@${message.author.id}> `;
             resultMessage += partMessages.join(", ");
 
             const fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(userProgress.leadin)), asyncCharLimit));
@@ -122,7 +122,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
 
             deleteUserProgress(message.author.id);
 
-            await message.author.send(getEmbeddedMessage(`Your result has been sent to this thread: <#${thread.id}>.`, true));
+            await message.author.send(getEmbeddedMessage(`Your result (**${totalPoints}** ${emoji_summary.join(" ")}) has been sent to this thread: <#${thread.id}>.`, true));
 
             const questionMessage = await playtestingChannel.messages.fetch(userProgress.questionId);
             if (questionMessage.hasThread) {
