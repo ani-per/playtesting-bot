@@ -141,11 +141,11 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
 
         deleteUserProgress(message.author.id);
 
-        await message.author.send(getEmbeddedMessage(`Your result (${points_emoji}) has been sent to this thread: <#${thread.id}>.`, true));
+        await message.author.send(getEmbeddedMessage(`Your result (${points_emoji}) has been sent to this thread: <#${thread.id}>`, true));
 
         const questionMessage = await playtestingChannel.messages.fetch(userProgress.questionId);
         if (questionMessage.hasThread) {
-            await message.author.send(getEmbeddedMessage(`See the discussion thread: <#${questionMessage?.thread?.id}>.`, true));
+            await message.author.send(getEmbeddedMessage(`See the discussion thread: <#${questionMessage?.thread?.id}>`, true));
         }
     } else {
         await message.author.send(getEmbeddedMessage("Command not recognized.", true));

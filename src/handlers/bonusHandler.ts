@@ -122,11 +122,11 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
 
             deleteUserProgress(message.author.id);
 
-            await message.author.send(getEmbeddedMessage(`Your result (**${totalPoints}** ${emoji_summary.join(" ")}) has been sent to this thread: <#${thread.id}>.`, true));
+            await message.author.send(getEmbeddedMessage(`Your result (**${totalPoints}** ${emoji_summary.join(" ")}) has been sent to this thread: <#${thread.id}>`, true));
 
             const questionMessage = await playtestingChannel.messages.fetch(userProgress.questionId);
             if (questionMessage.hasThread) {
-                await message.author.send(getEmbeddedMessage(`See the discussion thread: <#${questionMessage?.thread?.id}>.`, true));
+                await message.author.send(getEmbeddedMessage(`See the discussion thread: <#${questionMessage?.thread?.id}>`, true));
             }
         }
     }
