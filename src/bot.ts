@@ -298,4 +298,14 @@ client.on("interactionCreate", async (interaction: Interaction) => {
     }
 });
 
+client.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err);
+    process.exit(1); // PM2 will now see the exit and restart the bot
+});
+
+client.on("unhandledRejection", (reason, promise) => {
+    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+    process.exit(1);
+});
+
 client.login(config.DISCORD_TOKEN);
