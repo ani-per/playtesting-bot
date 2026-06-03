@@ -59,7 +59,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             ...userProgress.results, {
                 points: message.content.toLowerCase().startsWith("y") ? 10 : 0,
                 passed: message.content.toLowerCase().startsWith("p"),
-                note: note ? {text: note[1], index: userProgress.index} : {text: null, index: userProgress.index}
+                note: note ? { text: note[1], index: userProgress.index } : { text: null, index: userProgress.index }
             }
         ];
 

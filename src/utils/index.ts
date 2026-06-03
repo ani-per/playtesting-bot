@@ -46,7 +46,7 @@ const history_names = ["history", "historiography", "archeology"];
 const rmpss_names = ["religion", "myth", "phil", "social", "econ", "psych", "ling", "socio", "anthro", "law", "belief"]
 const arts_names = ["arts", "fine", "paint", "sculpt", "music", "classical", "auditory", "visual", "architecture", "photo", "film", "jazz", "opera", "dance"];
 const science_names = ["science", "bio", "chem", "physics", "math", "astro", "computer", "earth", "engineering", "ecology"];
-const other_names = ["other", "academic", "geography", "current", "events", "pop", "culture", "trash"];
+const other_names = ["other", "academic", "geography", "current", "events", "pop", "culture", "trash", "modern"];
 
 export const point_values: number[] = [20, 15, 10, 0, -5];
 export const powerMarks = ["(\\*)", "\(\*\)"];
