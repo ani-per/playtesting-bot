@@ -83,7 +83,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             let answer_emoji = (getEmojiList(["answer"]))[0] || "answer:";
 
             results.forEach(async function (r: any, i: number) {
-                let answer = shortenAnswerline(userProgress.answers[i]);
+                let answer = shortenAnswerline(userProgress?.answers[i]) || "";
                 let partMessage = "";
                 var points_emoji_name = "";
 
