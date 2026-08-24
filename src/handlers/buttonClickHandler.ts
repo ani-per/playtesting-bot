@@ -1,5 +1,5 @@
 import { Interaction, TextChannel } from "discord.js";
-import { client } from "src/bot";
+import { client, safeSend } from "src/bot";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
 import { buildButtonMessage, QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getEmbeddedMessage, getTossupParts, getToFirstIndicator, removeBonusValue, removeSpoilers, getCategoryName, getCategoryRole, isNumeric, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, getAuthorName, cleanThreadName, getCategoryCount, getResultsThreadId, getServerChannels, stripFormatting, abbreviate, removeMentions } from "src/utils";
 
@@ -14,7 +14,7 @@ export default async function handleButtonClick(interaction: Interaction, userPr
             const posterName = (questionMessage.member?.displayName ?? questionMessage.author.username).split(" ")[0];
 
             if (userProgress.get(interaction.user.id)) {
-                await interaction.user.send(getEmbeddedMessage("You tried to start playtesting a question but have a different question reading in progress. Please complete that reading or type `x` to end it, then try again."));
+                await safeSend(interaction.user, getEmbeddedMessage("You tried to start playtesting a question but have a different question reading in progress. Please complete that reading or type `x` to end it, then try again."));
             } else if (bonusMatch) {
                 let [_, leadin, part1, answer1, part2, answer2, part3, answer3, metadata, difficultyPart1, difficultyPart2, difficultyPart3] = bonusMatch;
                 leadin = removeMentions(leadin);
@@ -44,7 +44,7 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                     results: []
                 } as UserBonusProgress);
 
-                await interaction.user.send(getEmbeddedMessage(
+                await safeSend(interaction.user, getEmbeddedMessage(
                     [
                         "Here's your bonus! Type:",
                         "* `d` — direct an answer to the current part",
@@ -54,7 +54,7 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                     ].join("\n")
                 ));
                 let firstPart = removeSpoilers(leadin) + "\n[10] " + removeSpoilers(removeBonusValue(part1));
-                await interaction.user.send(firstPart);
+                await safeSend(interaction.user, firstPart);
             } else if (tossupMatch) {
                 let [_, question, answer, metadata] = tossupMatch;
                 question = removeMentions(question);
@@ -79,7 +79,7 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                 } as UserTossupProgress);
 
                 if (questionParts[0]) {
-                    await interaction.user.send(getEmbeddedMessage(
+                    await safeSend(interaction.user, getEmbeddedMessage(
                         [
                             "Here's your tossup! Type:",
                             "* `b` — buzz on the current clue",
@@ -90,9 +90,9 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                             "You may share your guess or a comment by putting it in parentheses at the end of your message — e.g. `n (foo? bar?)`."
                         ].join("\n")
                     ));
-                    await interaction.user.send(questionParts[0]);
+                    await safeSend(interaction.user, questionParts[0]);
                 } else {
-                    await interaction.user.send(getEmbeddedMessage("Oops, looks like the question wasn't properly spoiler tagged. Let the author know so they can fix!"));
+                    await safeSend(interaction.user, getEmbeddedMessage("Oops, looks like the question wasn't properly spoiler tagged. Let the author know so they can fix!"));
                 }
             }
         }
@@ -130,11 +130,10 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                 } else if (interaction.customId === "bulk_thread") {
                     fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(leadin)), bulkCharLimit));
                     threadName = metadata ?
-                        `${
-                            thisServerSetting?.packet_name ?
+                        `${thisServerSetting?.packet_name ?
                             abbreviate(thisServerSetting?.packet_name) + "." :
                             ""
-                        }B${isNumeric(questionNumber) ? questionNumber: ""} | ${categoryName} | ${fallbackName}` :
+                        }B${isNumeric(questionNumber) ? questionNumber : ""} | ${categoryName} | ${fallbackName}` :
                         `B | ${fallbackName}`;
                 }
             } else if (tossupMatch) {
@@ -155,11 +154,10 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                 } else if (interaction.customId === "bulk_thread") {
                     fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(question)), bulkCharLimit));
                     threadName = metadata ?
-                        `${
-                            thisServerSetting?.packet_name ?
+                        `${thisServerSetting?.packet_name ?
                             abbreviate(thisServerSetting?.packet_name) + "." :
                             ""
-                        }T${isNumeric(questionNumber) ? questionNumber: ""} | ${categoryName} | ${fallbackName}` :
+                        }T${isNumeric(questionNumber) ? questionNumber : ""} | ${categoryName} | ${fallbackName}` :
                         `T | ${fallbackName}`;
                 }
             }
@@ -178,18 +176,18 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                         const resultsChannel = client.channels.cache.get(resultChannel!.result_channel_id) as TextChannel;
                         const resultsMessage = await resultsChannel.messages.fetch(resultsThreadId);
                         message.edit(buildButtonMessage([
-                            {label: buttonLabel, id: "play_question", url: ""},
-                            {label: "Results", id: "", url: resultsMessage.thread?.url || ""}
+                            { label: buttonLabel, id: "play_question", url: "" },
+                            { label: "Results", id: "", url: resultsMessage.thread?.url || "" }
                         ]));
                     } else {
                         message.edit(buildButtonMessage([
-                            {label: buttonLabel, id: "play_question", url: ""}
+                            { label: buttonLabel, id: "play_question", url: "" }
                         ]));
                     }
                     await thread.members.add(message.author);
                 } else {
                     message.edit(buildButtonMessage([
-                        {label: "Discussion Thread", id: "bulk_thread", url: thread.url}
+                        { label: "Discussion Thread", id: "bulk_thread", url: thread.url }
                     ]));
                 }
                 await addRoles(message, thread, ["Head Editor"], false);

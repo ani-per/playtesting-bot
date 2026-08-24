@@ -1,4 +1,5 @@
 import { Message, TextChannel, TextThreadChannel } from "discord.js";
+import { safeSend } from "src/bot";
 import { powerMarks, superPowerMarks, getServerChannels, getBulkQuestionsInPacket, formatPercent, getEchoThreadId, printPacketName, deleteBulkQuestion } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList } from "src/utils/emojis";
@@ -21,7 +22,7 @@ export default async function handleTally(serverId: string, packetName: string, 
             let echoThreadId = getEchoThreadId(serverId, echoChannelId, packetName);
             let echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId) as TextThreadChannel;
             let tallyPacketDesc = echoThread ? `[${printPacketName(packetName)}](${echoThread!.url})` : `${printPacketName(packetName)}`
-            let tallyReply = await message.reply(`Tallying reacts for ${packetBulkQuestions.length} question${pluralString} in ${tallyPacketDesc} ...`);
+            let tallyReply = await safeSend(message, `Tallying reacts for ${packetBulkQuestions.length} question${pluralString} in ${tallyPacketDesc} ...`, "reply");
             for await (const bulkQuestion of packetBulkQuestions) {
                 try {
                     let echoMessage = await echoThread!.messages.fetch(bulkQuestion.echo_id);
@@ -127,6 +128,6 @@ export default async function handleTally(serverId: string, packetName: string, 
             console.log(`Echo channel not found for server ${serverId}.`);
         }
     } else {
-        await message.reply(`No questions in ${printPacketName(packetName)} to tally.`);
+        await safeSend(message, `No questions in ${printPacketName(packetName)} to tally.`, "reply");
     }
 }

@@ -1,10 +1,11 @@
 import { Message } from "discord.js";
+import { safeSend } from "src/bot";
 import { getBonusAuthorData, getTossupAuthorData } from "src/utils/queries";
 import { getTable } from "src/utils/table";
 import { formatDecimal, formatPercent } from "src/utils";
 import { AUTHOR } from "src/constants";
 
-export default async function handleAuthorCommand(message:Message<boolean>) {
+export default async function handleAuthorCommand(message: Message<boolean>) {
     if (message.guildId) {
         const categoryData = getTossupAuthorData(message.guildId!).map(d => Object.values({
             total_questions: String(d.total_questions).padStart(3, ' '),
@@ -16,7 +17,7 @@ export default async function handleAuthorCommand(message:Message<boolean>) {
             author_id: d.author_id
         }));
         const tossupTable = getTable(
-            [ 'Total', 'Total Plays', 'Conv. %', 'Neg %', 'Avg. Buzz', 'First Buzz', AUTHOR ],
+            ['Total', 'Total Plays', 'Conv. %', 'Neg %', 'Avg. Buzz', 'First Buzz', AUTHOR],
             categoryData
         );
         const bonusAuthorData = getBonusAuthorData(message.guildId!).map(d => Object.values({
@@ -29,11 +30,11 @@ export default async function handleAuthorCommand(message:Message<boolean>) {
             author_id: d.author_id
         }));
         const bonusTable = getTable(
-            [ 'Total', 'Total Plays', 'PPB', 'E%', 'M%', 'H%', AUTHOR ],
+            ['Total', 'Total Plays', 'PPB', 'E%', 'M%', 'H%', AUTHOR],
             bonusAuthorData
         );
 
-        await message.reply(`## Tossups\n${tossupTable}`);
-        await message.reply(`## Bonuses\n${bonusTable}`);
+        await safeSend(message, `## Tossups\n${tossupTable}`, "reply");
+        await safeSend(message, `## Bonuses\n${bonusTable}`, "reply");
     }
 }

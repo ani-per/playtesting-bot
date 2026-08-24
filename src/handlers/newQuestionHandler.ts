@@ -1,8 +1,8 @@
 import { Message, Application, TextChannel } from "discord.js";
+import { client, safeSend } from "src/bot";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
 import { powerMarks, superPowerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate, removeMentions } from "src/utils";
-import { client } from "src/bot";
 import { getEmojiList, reactEmojiList } from "src/utils/emojis";
 
 async function handleThread(msgChannel: ServerChannel, message: Message, isBonus: boolean, question: string, metadata: string, questionNumber: string = "") {
@@ -47,7 +47,7 @@ async function echoQuestion(question: string, echoChannelId: string, echoThreadI
     const echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
     const echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId);
     if (echoThread) {
-        return await echoThread.send(question.replace("!t", "").trim());
+        return await safeSend(echoThread, question.replace("!t", "").trim());
     } else {
         return null;
     }
@@ -136,7 +136,7 @@ export default async function handleNewQuestion(message: Message<boolean>) {
 
             // if a tossup was sent that has 2 or fewer spoiler tagged sections, assume that it's not meant to be played
             if (tossupParts.length <= 2) {
-                message.reply("The pasted tossup doesn't seem to be properly spoiler-tagged. Try again using the [paster dingus](https://minkowski.space/quizbowl/paster/) to auto-format the tossup.");
+                safeSend(message, "The pasted tossup doesn't seem to be properly spoiler-tagged. Try again using the [paster dingus](https://minkowski.space/quizbowl/paster/) to auto-format the tossup.", "reply");
                 return;
             }
 
@@ -183,32 +183,32 @@ export default async function handleNewQuestion(message: Message<boolean>) {
                             echoMessage.id
                         );
                         if (message.content.includes("!t")) {
-                            message.reply(buildButtonMessage([
+                            safeSend(message, buildButtonMessage([
                                 { label: "Go to Index", id: "echo", url: echoMessage?.url || "" }
-                            ]));
+                            ]), "reply");
                         } else {
-                            message.reply(buildButtonMessage([
+                            safeSend(message, buildButtonMessage([
                                 { label: "Create Discussion Thread", id: "bulk_thread", url: "" },
                                 { label: "Go to Index", id: "", url: echoMessage?.url || "" },
-                            ]));
+                            ]), "reply");
                         };
                     } else if (!message.content.includes("!t")) {
-                        message.reply(buildButtonMessage([
+                        safeSend(message, buildButtonMessage([
                             { label: "Create Discussion Thread", id: "bulk_thread", url: "" }
-                        ]));
+                        ]), "reply");
                     }
                 }
             } else if (msgChannel.channel_type === 1) {
                 const buttonLabel = "Play " + (!!bonusMatch ? "Bonus" : "Tossup");
                 if (message.content.includes("!t")) {
-                    message.reply(buildButtonMessage([
+                    safeSend(message, buildButtonMessage([
                         { label: buttonLabel, id: "play_question", url: "" },
-                    ]));
+                    ]), "reply");
                 } else {
-                    message.reply(buildButtonMessage([
+                    safeSend(message, buildButtonMessage([
                         { label: "Create Discussion Thread", id: "async_thread", url: "" },
                         { label: buttonLabel, id: "play_question", url: "" },
-                    ]));
+                    ]), "reply");
                 }
             }
             if (message.content.includes("!t")) {

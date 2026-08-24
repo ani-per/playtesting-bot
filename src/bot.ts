@@ -1,4 +1,16 @@
-import { Client, GatewayIntentBits, Partials, ChannelType, Interaction, TextChannel, TextThreadChannel, Events, EmbedBuilder } from "discord.js";
+import {
+    Client,
+    GatewayIntentBits,
+    Partials,
+    ChannelType,
+    Interaction,
+    TextChannel,
+    TextThreadChannel,
+    Events,
+    EmbedBuilder,
+    MessageCreateOptions,
+    Message,
+} from "discord.js";
 import { config } from "./config";
 import handleTossupPlaytest from "./handlers/tossupHandler";
 import handleBonusPlaytest from "./handlers/bonusHandler";
@@ -58,6 +70,63 @@ const helpEmbed = new EmbedBuilder()
     )
     .setTimestamp();
 
+export type Sendable = {
+    send(
+        payload: string | MessageCreateOptions
+    ): Promise<Message>;
+};
+
+export type SafeSendDestination = Sendable | Message;
+
+export async function safeSend(
+    destination: SafeSendDestination,
+    payload: string | MessageCreateOptions,
+    operation: "send" | "reply" = "send",
+    context?: string
+): Promise<Message> {
+    const callSite = new Error("Discord send/reply call site");
+
+    // Prevent Discord from receiving an empty message.
+    if (typeof payload === "string" && payload.trim() === "") {
+        throw new Error("Cannot send an empty Discord message.");
+    }
+
+    try {
+        if (operation === "reply") {
+            return await (destination as Message).reply(payload);
+        }
+
+        return await (destination as Sendable).send(payload);
+    } catch (error: unknown) {
+        console.error("========== DISCORD SEND FAILED ==========");
+        console.error("Operation:", operation);
+
+        if (context) {
+            console.error("Context:", context);
+        }
+
+        console.error("Payload:", payload);
+
+        if (error instanceof Error) {
+            console.error("Error:", {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+                code: "code" in error ? error.code : undefined,
+            });
+        } else {
+            console.error("Unknown error:", error);
+        }
+
+        console.error("CALL SITE:");
+        console.error(callSite.stack);
+
+        console.error("==========================================");
+
+        throw error;
+    }
+}
+
 export const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -116,7 +185,7 @@ client.on("messageCreate", async (message) => {
                         packetArgument &&
                         (cleanedPacketName === currentPacket)
                     ) {
-                        message.reply(`${printPacketName(cleanedPacketName)} is already being read.`);
+                        safeSend(message, `${printPacketName(cleanedPacketName)} is already being read.`, "reply");
                     } else {
                         if (
                             endPacket ||
@@ -126,7 +195,7 @@ client.on("messageCreate", async (message) => {
                                 packetArgument
                             )
                         ) {
-                            let endMessage = [""];
+                            let endMessageArray = [""];
                             let closingVerb = "";
                             if (
                                 stopCommands.some(v => command.startsWith("!" + v)) ||
@@ -140,28 +209,34 @@ client.on("messageCreate", async (message) => {
                             if (currentPacket) {
                                 updatePacketName(serverId, "");
                                 packetToTally = currentPacket;
-                                endMessage.push(`Reading of ${printPacketName(currentPacket)} has ${closingVerb}.`);
+                                endMessageArray.push(`Reading of ${printPacketName(currentPacket)} has ${closingVerb}.`);
                             } else if (packetArgument) {
+                                // console.log(`Ending or starting packet ${cleanedPacketName}.`);
                                 updatePacketName(serverId, "");
                                 let packetBulkQuestions = getBulkQuestionsInPacket(serverId, cleanedPacketName);
                                 if (packetBulkQuestions.length > 0) {
-                                    endMessage.push(`${printPacketName(cleanedPacketName)} ${closingVerb}.`);
+                                    endMessageArray.push(`${printPacketName(cleanedPacketName)} ${closingVerb}.`);
                                 } else {
-                                    endMessage.push(`${printPacketName(cleanedPacketName)} not found.`);
+                                    endMessageArray.push(`${printPacketName(cleanedPacketName)} not found.`);
                                 }
                             } else {
                                 noPacket = true;
+                                // endMessageArray.push(`No packet is being read, and you did not specify a packet in your command to stop or end.`);
                             }
                             if (
                                 startPacket &&
                                 currentPacket &&
                                 packetArgument
                             ) {
-                                endMessage.push(`Preparing to read ${printPacketName(cleanedPacketName)} ...`);
+                                endMessageArray.push(`Preparing to read ${printPacketName(cleanedPacketName)} ...`);
                             }
-                            message.reply(endMessage.join(" "));
+                            let endMessage = endMessageArray.join(" ");
+                            if (endMessage) {
+                                safeSend(message, endMessage, "reply");
+                            }
                         }
                         if (startPacket && packetArgument) {
+                            // console.log(`Starting packet ${cleanedPacketName}.`);
                             let newPacketName = updatePacketName(serverId, cleanedPacketName);
                             currentPacket = newPacketName;
                             let printPacket = printPacketName(currentPacket);
@@ -169,32 +244,34 @@ client.on("messageCreate", async (message) => {
                                 let echoChannel = (client.channels.cache.get(echoChannelId) as TextChannel);
                                 let echoThreadId = getEchoThreadId(serverId, echoChannelId, newPacketName);
                                 if (!echoThreadId) {
-                                    let packetMessage = await echoChannel.send(`## [${printPacket}](${message.url})`);
+                                    let packetMessage = await safeSend(echoChannel, `## [${printPacket}](${message.url})`);
                                     if (packetMessage) {
                                         let newEchoThread = await packetMessage.startThread({
                                             name: printPacket.replaceAll("\`", ""),
                                             autoArchiveDuration: 60
                                         });
                                         saveEchoSetting(serverId, echoChannelId, newPacketName, newEchoThread?.id);
-                                        message.reply(`Reading of [${printPacket}](${newEchoThread.url}) has begun.`);
+                                        safeSend(message, `Reading of [${printPacket}](${newEchoThread.url}) has begun.`, "reply");
                                     }
                                 } else {
+                                    // console.log("Looking for packet name.")
                                     let echoThread = echoChannel!.threads.cache.find(x => x.id === echoThreadId) as TextThreadChannel;
-                                    message.reply(`Resumed reading of [${printPacket}](${echoThread.url}).`);
+                                    safeSend(message, `Resumed reading of [${printPacket}](${echoThread?.url || ""}).`, "reply");
                                 }
                             } else {
-                                message.reply("Could not begin reading. An echo channel has not been configured.");
+                                safeSend(message, "Could not begin reading. An echo channel has not been configured.", "reply");
                             }
                         }
                     }
                 } else if (getPacket) {
                     if (packetArgument) {
                         let packetBulkQuestions = getBulkQuestionsInPacket(serverId, cleanedPacketName);
-                        message.reply(`${packetBulkQuestions.length} questions have been read as part of ${printPacketName(cleanedPacketName)}.`);
+                        safeSend(message, `${packetBulkQuestions.length} questions have been read as part of ${printPacketName(cleanedPacketName)}.`, "reply");
                     } else if (currentPacket) {
-                        message.reply(`The current packet is ${printPacketName(currentPacket)}.`);
+                        safeSend(message, `The current packet is ${printPacketName(currentPacket)}.`, "reply");
                     } else {
                         noPacket = true;
+                        // safeSend(message, `No packet is being read, and you did not specify a packet in your command to check the status.`, "reply");
                     }
                 }
             }
@@ -206,7 +283,7 @@ client.on("messageCreate", async (message) => {
                             if (tallyBulkQuestions.length > 0) {
                                 await handleTally(serverId, packet, message);
                             } else {
-                                message.reply(`No questions to tally in Packet ${packet}.`);
+                                safeSend(message, `No questions to tally in Packet ${packet}.`, "reply");
                             }
                         });
                     } else if (
@@ -216,7 +293,7 @@ client.on("messageCreate", async (message) => {
                         if (tallyBulkQuestions.length > 0) {
                             await handleTally(serverId, packetToTally, message);
                         } else {
-                            message.reply(`No questions to tally in Packet \`${packetToTally}\`.`);
+                            safeSend(message, `No questions to tally in Packet \`${packetToTally}\`.`, "reply");
                         }
                     }
                 } else {
@@ -228,7 +305,7 @@ client.on("messageCreate", async (message) => {
                 }
             }
             if (noPacket) {
-                message.reply("No packet is being read right now.");
+                safeSend(message, "No packet is being read right now.", "reply");
             }
             if (deleteCommands.some(v => command.startsWith("!" + v))) {
                 if (packetArgument) {
@@ -243,27 +320,27 @@ client.on("messageCreate", async (message) => {
                             if (echoMessage) {
                                 await echoMessage.delete();
                             }
-                            await echoThread.delete();
+                            await echoThread?.delete();
                             deleteBulkPacket(serverId, cleanedPacketName);
                             if (currentPacket === cleanedPacketName) {
                                 updatePacketName(serverId, "");
                                 deleteMessage.push(`Reading of ${printPacketName(currentPacket)} has ended.`);
                             }
                             deleteMessage.push(`${printPacketName(cleanedPacketName)} and its associated thread have been deleted.`);
-                            message.reply(deleteMessage.join(" "));
+                            safeSend(message, deleteMessage.join(" "), "reply");
                         } else {
-                            message.reply(`${printPacketName(cleanedPacketName)} does not exist.`);
+                            safeSend(message, `${printPacketName(cleanedPacketName)} does not exist.`, "reply");
                         }
                     } else {
-                        message.reply("Echo channel not configured.");
+                        safeSend(message, "Echo channel not configured.", "reply");
                     }
                 } else {
-                    message.reply("No packet name was provided to delete settings.");
+                    safeSend(message, "No packet name was provided to delete settings.", "reply");
                 }
             }
             if (helpCommands.some(v => message.content.startsWith("!" + v))) {
                 await sleep(1000);
-                message.reply({ embeds: [helpEmbed] })
+                safeSend(message, { embeds: [helpEmbed] }, "reply")
             }
         } else if (message.content.startsWith("!category")) {
             await handleCategoryCommand(message);

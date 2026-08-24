@@ -2,6 +2,7 @@ import {
     ActionRowBuilder, BaseMessageOptions, ButtonBuilder, ButtonStyle, Collection, EmbedBuilder,
     Guild, Message, MessageCreateOptions, MessageFlags, PublicThreadChannel, TextChannel, TextThreadChannel, ChannelType
 } from "discord.js";
+import { safeSend } from "src/bot"
 import Database from 'better-sqlite3';
 import { encrypt } from "./crypto";
 import { sum, group, listify } from 'radash'
@@ -425,9 +426,9 @@ export const getResultsThreadAndUpdateSummary = async (userProgress: UserProgres
         }
 
         if (userProgress.type === QuestionType.Tossup) {
-            resultsThread.send(await getTossupSummary(userProgress.questionId, (userProgress as UserTossupProgress).questionParts, (userProgress as UserTossupProgress).answer, userProgress.questionUrl));
+            safeSend(resultsThread, await getTossupSummary(userProgress.questionId, (userProgress as UserTossupProgress).questionParts, (userProgress as UserTossupProgress).answer, userProgress.questionUrl));
         } else {
-            resultsThread.send(await getBonusSummary(userProgress.questionId, userProgress.questionUrl));
+            safeSend(resultsThread, await getBonusSummary(userProgress.questionId, userProgress.questionUrl));
         }
     } else {
         resultsThread = resultsChannel.threads.cache.find(x => x.id === resultsThreadId) as TextThreadChannel;
@@ -504,7 +505,8 @@ export async function addRoles(
         } else {
             roleNote = "Couldn't detect a role to tag.";
         }
-        await thread.send(
+        await safeSend(
+            thread,
             roleNote +
             (note ? "\n" + note : "")
         );

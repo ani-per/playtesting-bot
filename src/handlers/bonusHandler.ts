@@ -1,4 +1,5 @@
 import { Client, Message, TextChannel } from "discord.js";
+import { safeSend } from "src/bot"
 import { asyncCharLimit } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
 import { UserBonusProgress, getEmbeddedMessage, getServerChannels, getSilentMessage, getResultsThreadAndUpdateSummary, getToFirstIndicator, removeQuestionNumber, removeBonusValue, removeSpoilers, saveBonusDirect, shortenAnswerline, cleanThreadName, stripFormatting } from "src/utils";
@@ -9,7 +10,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
 
     if (message.content.toLowerCase().startsWith("x")) {
         deleteUserProgress(message.author.id);
-        await message.author.send(getEmbeddedMessage("Ended bonus reading.", true));
+        await safeSend(message.author, getEmbeddedMessage("Ended bonus reading.", true));
 
         return;
     }
@@ -33,14 +34,14 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             if (index === 0) {
                 partToShow = removeBonusValue(removeSpoilers(userProgress.leadin || "")) + "\n" + partToShow;
             }
-            await message.author.send(getSilentMessage(partToShow));
+            await safeSend(message.author, getSilentMessage(partToShow));
         } else {
-            await message.author.send(getEmbeddedMessage("You can't go back; this was the first bonus part.", true));
+            await safeSend(message.author, getEmbeddedMessage("You can't go back; this was the first bonus part.", true));
         }
     }
 
     if (!userProgress.grade && (message.content.toLowerCase().startsWith("d") || message.content.toLowerCase().startsWith("p"))) {
-        await message.author.send(getSilentMessage(`ANSWER: ${removeSpoilers(userProgress.answers![userProgress.index])}`));
+        await safeSend(message.author, getSilentMessage(`ANSWER: ${removeSpoilers(userProgress.answers![userProgress.index])}`));
     }
 
     if (!userProgress.grade && message.content.toLowerCase().startsWith("d")) {
@@ -49,7 +50,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             grade: true
         });
 
-        await message.author.send(getEmbeddedMessage("Were you correct? Type `y`/`yes` or `n`/`no`. To indicate your answer, you can put it in parentheses at the end of your message - e.g. `y (foo)`. To undo your direct, type `u`/`undo`.", true));
+        await safeSend(message.author, getEmbeddedMessage("Were you correct? Type `y`/`yes` or `n`/`no`. To indicate your answer, you can put it in parentheses at the end of your message - e.g. `y (foo)`. To undo your direct, type `u`/`undo`.", true));
     }
 
     if (validGradingResponse || (!userProgress.grade && message.content.toLowerCase().startsWith("p"))) {
@@ -72,7 +73,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
 
         if (index < userProgress.parts.length) {
             let partToShow = "[10] " + removeBonusValue(removeSpoilers(userProgress.parts[index] || ""));
-            await message.author.send(getSilentMessage(partToShow));
+            await safeSend(message.author, getSilentMessage(partToShow));
         } else {
             const key = KeySingleton.getInstance().getKey(message);
             const resultChannel = getServerChannels(userProgress.serverId).find(s => (s.channel_id === userProgress.channelId && s.channel_type === 1));
@@ -118,15 +119,15 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             const playtestingChannel = client.channels.cache.get(userProgress.channelId) as TextChannel;
             const thread = await getResultsThreadAndUpdateSummary(userProgress, threadName.replaceAll(/\s\s+/g, " ").trim().slice(0, 100), resultsChannel, playtestingChannel);
 
-            await thread.send(resultMessage);
+            await safeSend(thread, resultMessage);
 
             deleteUserProgress(message.author.id);
 
-            await message.author.send(getEmbeddedMessage(`Your result (**${totalPoints}** ${emoji_summary.join(" ")}) has been sent to this thread: <#${thread.id}>`, true));
+            await safeSend(message.author, getEmbeddedMessage(`Your result (**${totalPoints}** ${emoji_summary.join(" ")}) has been sent to this thread: <#${thread.id}>`, true));
 
             const questionMessage = await playtestingChannel.messages.fetch(userProgress.questionId);
             if (questionMessage.hasThread) {
-                await message.author.send(getEmbeddedMessage(`See the discussion thread: <#${questionMessage?.thread?.id}>`, true));
+                await safeSend(message.author, getEmbeddedMessage(`See the discussion thread: <#${questionMessage?.thread?.id}>`, true));
             }
         }
     }

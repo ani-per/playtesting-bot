@@ -1,10 +1,11 @@
 import { Message } from "discord.js";
+import { safeSend } from "src/bot";
 import { getBonusCategoryData, getTossupCategoryData } from "src/utils/queries";
 import { getTable } from "src/utils/table";
 import { formatDecimal, formatPercent } from "src/utils";
 import { CATEGORY } from "src/constants";
 
-export default async function handleCategoryCommand(message:Message<boolean>) {
+export default async function handleCategoryCommand(message: Message<boolean>) {
     if (message.guildId) {
         const rawCategoryData = getTossupCategoryData(message.guildId!);
         const categoryData = rawCategoryData.map(d => Object.values({
@@ -17,7 +18,7 @@ export default async function handleCategoryCommand(message:Message<boolean>) {
             category: d.category
         }));
         const tossupTable = getTable(
-            [ 'Total', 'Total Plays', 'Conv. %', 'Neg %', 'Avg. Buzz', 'First Buzz', CATEGORY ],
+            ['Total', 'Total Plays', 'Conv. %', 'Neg %', 'Avg. Buzz', 'First Buzz', CATEGORY],
             categoryData
         );
         const bonusCategoryData = getBonusCategoryData(message.guildId!).map(d => Object.values({
@@ -30,11 +31,11 @@ export default async function handleCategoryCommand(message:Message<boolean>) {
             category: d.category
         }));
         const bonusTable = getTable(
-            [ 'Total', 'Total Plays', 'PPB', 'E%', 'M%', 'H%', CATEGORY],
+            ['Total', 'Total Plays', 'PPB', 'E%', 'M%', 'H%', CATEGORY],
             bonusCategoryData
         );
 
-        await message.reply(`## Tossups\n${tossupTable}`);
-        await message.reply(`## Bonuses\n${bonusTable}`);
+        await safeSend(message, `## Tossups\n${tossupTable}`, "reply");
+        await safeSend(message, `## Bonuses\n${bonusTable}`, "reply");
     }
 }

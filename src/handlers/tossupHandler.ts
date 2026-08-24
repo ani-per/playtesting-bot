@@ -1,4 +1,5 @@
 import { Client, Message, TextChannel } from "discord.js";
+import { safeSend } from "src/bot"
 import { asyncCharLimit } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
 import { powerMarks, superPowerMarks, UserTossupProgress, cleanThreadName, getEmbeddedMessage, getServerChannels, getSilentMessage, getResultsThreadAndUpdateSummary, getToFirstIndicator, removeQuestionNumber, removeSpoilers, saveBuzz, shortenAnswerline, stripFormatting } from "src/utils";
@@ -7,7 +8,7 @@ import { getEmojiList } from "src/utils/emojis";
 export default async function handleTossupPlaytest(message: Message<boolean>, client: Client<boolean>, userProgress: UserTossupProgress, setUserProgress: (key: string, value: UserTossupProgress) => void, deleteUserProgress: (key: any) => void) {
     if (message.content.toLowerCase().startsWith("x")) {
         deleteUserProgress(message.author.id);
-        await message.author.send(getEmbeddedMessage("Ended tossup reading.", true));
+        await safeSend(message.author, getEmbeddedMessage("Ended tossup reading.", true));
     } else if ((!userProgress.buzzed && !userProgress.grade && message.content.toLowerCase().startsWith("n")) || (userProgress.buzzed && message.content.toLowerCase().startsWith("w"))) {
         const index = userProgress.index + 1;
         const guess = message.content.match(/\((.+)\)/);
@@ -24,10 +25,10 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
         });
 
         if (userProgress.questionParts.length > index) {
-            await message.author.send(getSilentMessage(userProgress.questionParts[index]));
+            await safeSend(message.author, getSilentMessage(userProgress.questionParts[index]));
         }
         if (userProgress.questionParts.length - 1 <= index) {
-            await message.author.send(getEmbeddedMessage("You've reached the end of the question. Buzz by typing `b`/`buzz`, end by typing `e`/`end`, or go back by typing `u`/`undo`.", true));
+            await safeSend(message.author, getEmbeddedMessage("You've reached the end of the question. Buzz by typing `b`/`buzz`, end by typing `e`/`end`, or go back by typing `u`/`undo`.", true));
         }
     } else if ((!userProgress.buzzed && !userProgress.grade && message.content.toLowerCase().startsWith("u"))) {
         if (userProgress.index > 0) {
@@ -41,17 +42,17 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
             });
 
             if (userProgress.questionParts.length > index) {
-                await message.author.send(getSilentMessage(userProgress.questionParts[index]));
+                await safeSend(message.author, getSilentMessage(userProgress.questionParts[index]));
             }
         } else {
-            await message.author.send(getEmbeddedMessage("You can't go back; this was the first clue.", true));
+            await safeSend(message.author, getEmbeddedMessage("You can't go back; this was the first clue.", true));
         }
     } else if (message.content.toLowerCase().startsWith("b")) {
         setUserProgress(message.author.id, {
             ...userProgress,
             buzzed: true
         });
-        await message.author.send(getEmbeddedMessage("Reveal answer? Type `y`/`yes` to see answer or `w`/`withdraw` to withdraw and continue playing.", true));
+        await safeSend(message.author, getEmbeddedMessage("Reveal answer? Type `y`/`yes` to see answer or `w`/`withdraw` to withdraw and continue playing.", true));
     } else if (message.content.toLowerCase().startsWith("y") && userProgress.buzzed) {
         setUserProgress(message.author.id, {
             ...userProgress,
@@ -59,8 +60,8 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
             grade: true
         });
 
-        await message.author.send(getSilentMessage(`ANSWER: ${removeSpoilers(userProgress.answer)}`));
-        await message.author.send(getEmbeddedMessage("Were you correct? Type `y`/`yes` or `n`/`no`. To indicate your answer, you can put it in parentheses at the end of your message - e.g. `y (foo)`.", true));
+        await safeSend(message.author, getSilentMessage(`ANSWER: ${removeSpoilers(userProgress.answer)}`));
+        await safeSend(message.author, getEmbeddedMessage("Were you correct? Type `y`/`yes` or `n`/`no`. To indicate your answer, you can put it in parentheses at the end of your message - e.g. `y (foo)`.", true));
     } else if (message.content.toLowerCase().startsWith("e") || ((message.content.toLowerCase().startsWith("y") || message.content.toLowerCase().startsWith("n")) && userProgress.grade)) {
         if (message.content.toLowerCase().startsWith("e")) {
             userProgress.index = userProgress.questionParts.length - 1;
@@ -96,7 +97,7 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
         let charactersRevealed = userProgress.questionParts[buzzIndex].length;
 
         if (message.content.toLowerCase().startsWith("e"))
-            await message.author.send(getSilentMessage(`ANSWER: ${removeSpoilers(userProgress.answer)}`));
+            await safeSend(message.author, getSilentMessage(`ANSWER: ${removeSpoilers(userProgress.answer)}`));
 
         var points_emoji_name = "";
         if (message.content.toLowerCase().startsWith("e")) {
@@ -137,17 +138,17 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
         const playtestingChannel = client.channels.cache.get(userProgress.channelId) as TextChannel;
         const thread = await getResultsThreadAndUpdateSummary(userProgress, threadName.replaceAll(/\s\s+/g, " ").trim().slice(0, 100), resultsChannel, playtestingChannel);
 
-        await thread.send(resultMessage);
+        await safeSend(thread, resultMessage);
 
         deleteUserProgress(message.author.id);
 
-        await message.author.send(getEmbeddedMessage(`Your result (${points_emoji}) has been sent to this thread: <#${thread.id}>`, true));
+        await safeSend(message.author, getEmbeddedMessage(`Your result (${points_emoji}) has been sent to this thread: <#${thread.id}>`, true));
 
         const questionMessage = await playtestingChannel.messages.fetch(userProgress.questionId);
         if (questionMessage.hasThread) {
-            await message.author.send(getEmbeddedMessage(`See the discussion thread: <#${questionMessage?.thread?.id}>`, true));
+            await safeSend(message.author, getEmbeddedMessage(`See the discussion thread: <#${questionMessage?.thread?.id}>`, true));
         }
     } else {
-        await message.author.send(getEmbeddedMessage("Command not recognized.", true));
+        await safeSend(message.author, getEmbeddedMessage("Command not recognized.", true));
     }
 }
