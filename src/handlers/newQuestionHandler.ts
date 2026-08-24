@@ -135,7 +135,7 @@ export default async function handleNewQuestion(message: Message<boolean>) {
             questionNumber = getQuestionNumber(question);
 
             // if a tossup was sent that has 2 or fewer spoiler tagged sections, assume that it's not meant to be played
-            if (tossupParts.length <= 2) {
+            if (msgChannel.channel_type === 1 && tossupParts.length <= 2) {
                 safeSend(message, "The pasted tossup doesn't seem to be properly spoiler-tagged. Try again using the [paster dingus](https://minkowski.space/quizbowl/paster/) to auto-format the tossup.", "reply");
                 return;
             }
