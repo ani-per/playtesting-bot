@@ -47,7 +47,7 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
         } else {
             await safeSend(message.author, getEmbeddedMessage("You can't go back; this was the first clue.", true));
         }
-    } else if (message.content.toLowerCase().startsWith("b")) {
+    } else if (message.content.toLowerCase().startsWith("b") && !userProgress.buzzed && !userProgress.grade) {
         setUserProgress(message.author.id, {
             ...userProgress,
             buzzed: true
