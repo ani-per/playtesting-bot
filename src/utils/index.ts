@@ -213,6 +213,10 @@ export type EchoSetting = {
     thread_id: string;
 }
 
+// Minimum length for unspoilered text preceding the first spoiler tag to count as a clue
+// (filters out stray question numbers, bullets, etc.)
+const minUnspoiledLeadinLength = 15;
+
 export const getTossupParts = (questionText: string) => {
     const regex = /\|\|([^|]+)\|\|/g;
     const matches = [];
@@ -220,6 +224,15 @@ export const getTossupParts = (questionText: string) => {
 
     while ((match = regex.exec(questionText)) !== null) {
         matches.push(match[1]);
+    }
+
+    // Treat an unspoilered first sentence (before the first spoiler tag) as its own clue
+    const firstSpoiler = questionText.indexOf("||");
+    if (firstSpoiler > 0 && matches.length > 0) {
+        const leadin = removeQuestionNumber(questionText.substring(0, firstSpoiler).trim()).replaceAll(/^[*_\s]+|[*_\s]+$/g, "");
+        if (leadin.length >= minUnspoiledLeadinLength) {
+            matches.unshift(leadin);
+        }
     }
 
     return matches;
@@ -648,6 +661,29 @@ export const getToFirstIndicator = (clue: string, limit: number = 35) => {
     }
 
     return `${trimmedClue.substring(0, charLimit)}${trail ? "..." : ""}`;
+}
+
+// The first few words of a question, for use as a thread name
+export const getThreadSnippet = (text: string, maxWords: number = 7, maxChars: number = 45) => {
+    let cleaned = cleanThreadName(stripFormatting(removeQuestionNumber(removeSpoilers(text || ""))));
+    // drop common preambles that say nothing about the question
+    cleaned = cleaned.replace(/^(description acceptable|note to (players|moderator|teams)[^.]*)\.?\s*/i, "").trim();
+    const words = cleaned.split(" ").filter(w => w);
+    const kept: string[] = [];
+    for (const word of words) {
+        if (kept.length >= maxWords) break;
+        if (kept.length > 0 && (kept.join(" ").length + 1 + word.length) > maxChars) break;
+        kept.push(word);
+    }
+    let snippet = kept.join(" ").replace(/[,;:(\-–—]+$/, "").trim();
+    if (kept.length < words.length) snippet += "…";
+    return snippet;
+}
+
+// Thread names lead with the question's first few words so they're recognizable in the sidebar
+export const buildThreadName = (snippet: string, ...tags: (string | undefined | null)[]) => {
+    const parts = [snippet, ...tags].map(p => p?.trim()).filter(p => p);
+    return parts.join(" | ").replaceAll(/\s\s+/g, " ").trim().slice(0, 100);
 }
 
 export const removeQuestionNumber = (question: string, get: boolean = false) => {

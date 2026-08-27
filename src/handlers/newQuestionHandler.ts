@@ -2,33 +2,29 @@ import { Message, Application, TextChannel } from "discord.js";
 import { client, safeSend } from "src/bot";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
-import { powerMarks, superPowerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate, removeMentions } from "src/utils";
+import { powerMarks, superPowerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate, removeMentions, getThreadSnippet, buildThreadName, removeBonusValue } from "src/utils";
 import { getEmojiList, reactEmojiList } from "src/utils/emojis";
 
 async function handleThread(msgChannel: ServerChannel, message: Message, isBonus: boolean, question: string, metadata: string, questionNumber: string = "") {
     let thisServerSetting = getServerSettings(message.guild!.id).find(ss => ss.server_id == message.guild!.id);
     let threadName = "Discussion Thread";
-    let fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(question)), msgChannel.channel_type === 2 ? bulkCharLimit : asyncCharLimit));
+    const snippet = getThreadSnippet(isBonus ? question : (getTossupParts(question)[0] || question));
     let categoryName = getCategoryName(metadata);
     let categoryRoleName = getCategoryRole(categoryName);
-    // console.log(`Metadata: ${metadata}`);
-    // console.log(`Category Name: ${categoryName}; Category Role Name: ${categoryRoleName}`);
+    const typeLetter = isBonus ? "B" : "T";
 
     if (msgChannel.channel_type === 2) {
         threadName = metadata ?
-            `${thisServerSetting?.packet_name ?
-                abbreviate(thisServerSetting?.packet_name) + "." :
-                ""
-            }${isBonus ? "B" : "T"}${questionNumber} | ${categoryName} | ${fallbackName}` :
-            `${isBonus ? "B" : "T"} | ${fallbackName}`;
+            buildThreadName(snippet, `${thisServerSetting?.packet_name ? abbreviate(thisServerSetting?.packet_name) + "." : ""}${typeLetter}${questionNumber}`, categoryName) :
+            buildThreadName(snippet, typeLetter);
     } else if (msgChannel.channel_type === 1) {
         threadName = metadata ?
-            `${metadata} | ${isBonus ? "B" : "T"}${getCategoryCount(message.author.id, message.guild?.id, categoryName, isBonus)}` :
-            `${isBonus ? "B" : "T"} | ${fallbackName}`;
+            buildThreadName(snippet, `${typeLetter}${getCategoryCount(message.author.id, message.guild?.id, categoryName, isBonus)}`, categoryName) :
+            buildThreadName(snippet, typeLetter);
     }
 
     const thread = await message.startThread({
-        name: threadName.replaceAll(/\s\s+/g, " ").trim(),
+        name: threadName,
         autoArchiveDuration: 60
     });
 
@@ -106,7 +102,7 @@ export default async function handleNewQuestion(message: Message<boolean>) {
             const difficulty2Match = part2.match(BONUS_DIFFICULTY_REGEX) || [];
             const difficulty3Match = part3.match(BONUS_DIFFICULTY_REGEX) || [];
             leadin = removeMentions(leadin);
-            threadQuestionText = leadin;
+            threadQuestionText = removeSpoilers(leadin) ? leadin : removeBonusValue(part1);
             threadMetadata = removeSpoilers(metadata);
             questionNumber = getQuestionNumber(leadin);
 
