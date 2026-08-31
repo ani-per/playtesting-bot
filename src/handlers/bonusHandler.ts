@@ -2,7 +2,7 @@ import { Client, Message, TextChannel } from "discord.js";
 import { safeSend } from "src/bot"
 import { asyncCharLimit } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
-import { UserBonusProgress, getEmbeddedMessage, getServerChannels, getSilentMessage, getResultsThreadAndUpdateSummary, getToFirstIndicator, removeQuestionNumber, removeBonusValue, removeSpoilers, saveBonusDirect, shortenAnswerline, cleanThreadName, stripFormatting } from "src/utils";
+import { UserBonusProgress, getEmbeddedMessage, getServerChannels, getSilentMessage, getResultsThreadAndUpdateSummary, getToFirstIndicator, removeQuestionNumber, removeBonusValue, removeSpoilers, saveBonusDirect, shortenAnswerline, cleanThreadName, stripFormatting, getThreadSnippet, buildThreadName } from "src/utils";
 import { getEmojiList } from "src/utils/emojis";
 
 export default async function handleBonusPlaytest(message: Message<boolean>, client: Client<boolean>, userProgress: UserBonusProgress, setUserProgress: (key: any, value: any) => void, deleteUserProgress: (key: any) => void) {
@@ -113,11 +113,10 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             resultMessage += ` **${totalPoints}** <@${message.author.id}> `;
             resultMessage += partMessages.join(", ");
 
-            const fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(userProgress.leadin)), asyncCharLimit));
-            const threadName = `B | ${userProgress?.authorName || userProgress?.posterName || ""} | ${fallbackName}`;
+            const threadName = buildThreadName(getThreadSnippet(removeSpoilers(userProgress.leadin) ? userProgress.leadin : removeBonusValue(userProgress.parts[0])), "B", userProgress?.authorName || userProgress?.posterName || "");
             const resultsChannel = client.channels.cache.get(resultChannel!.result_channel_id) as TextChannel;
             const playtestingChannel = client.channels.cache.get(userProgress.channelId) as TextChannel;
-            const thread = await getResultsThreadAndUpdateSummary(userProgress, threadName.replaceAll(/\s\s+/g, " ").trim().slice(0, 100), resultsChannel, playtestingChannel);
+            const thread = await getResultsThreadAndUpdateSummary(userProgress, threadName, resultsChannel, playtestingChannel);
 
             await safeSend(thread, resultMessage);
 

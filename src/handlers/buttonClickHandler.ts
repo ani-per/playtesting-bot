@@ -1,7 +1,7 @@
 import { Interaction, TextChannel } from "discord.js";
 import { client, safeSend } from "src/bot";
 import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
-import { buildButtonMessage, QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getEmbeddedMessage, getTossupParts, getToFirstIndicator, removeBonusValue, removeSpoilers, getCategoryName, getCategoryRole, isNumeric, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, getAuthorName, cleanThreadName, getCategoryCount, getResultsThreadId, getServerChannels, stripFormatting, abbreviate, removeMentions } from "src/utils";
+import { buildButtonMessage, QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getEmbeddedMessage, getTossupParts, getToFirstIndicator, removeBonusValue, removeSpoilers, getCategoryName, getCategoryRole, isNumeric, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, getAuthorName, cleanThreadName, getCategoryCount, getResultsThreadId, getServerChannels, stripFormatting, abbreviate, removeMentions, getThreadSnippet, buildThreadName } from "src/utils";
 
 export default async function handleButtonClick(interaction: Interaction, userProgress: Map<string, UserProgress>, setUserProgress: (key: any, value: any) => void) {
     if (interaction.isButton() && interaction.customId === "play_question") {
@@ -122,19 +122,15 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                     categoryRoleName = getCategoryRole(categoryName);
                 }
 
+                const snippet = getThreadSnippet(removeSpoilers(leadin) ? leadin : removeBonusValue(part1));
                 if (interaction.customId === "async_thread") {
-                    fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(leadin)), asyncCharLimit));
                     threadName = metadata ?
-                        `${metadata} | B${getCategoryCount(questionMessage.author.id, message.guild?.id, categoryName, true)}` :
-                        `B | ${fallbackName}`;
+                        buildThreadName(snippet, `B${getCategoryCount(questionMessage.author.id, message.guild?.id, categoryName, true)}`, categoryName) :
+                        buildThreadName(snippet, "B");
                 } else if (interaction.customId === "bulk_thread") {
-                    fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(leadin)), bulkCharLimit));
                     threadName = metadata ?
-                        `${thisServerSetting?.packet_name ?
-                            abbreviate(thisServerSetting?.packet_name) + "." :
-                            ""
-                        }B${isNumeric(questionNumber) ? questionNumber : ""} | ${categoryName} | ${fallbackName}` :
-                        `B | ${fallbackName}`;
+                        buildThreadName(snippet, `${thisServerSetting?.packet_name ? abbreviate(thisServerSetting?.packet_name) + "." : ""}B${isNumeric(questionNumber) ? questionNumber : ""}`, categoryName) :
+                        buildThreadName(snippet, "B");
                 }
             } else if (tossupMatch) {
                 let [_, question, answer, metadata] = tossupMatch;
@@ -146,24 +142,20 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                     categoryRoleName = getCategoryRole(categoryName);
                 }
 
+                const snippet = getThreadSnippet(getTossupParts(question)[0] || question);
                 if (interaction.customId === "async_thread") {
-                    fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(question)), asyncCharLimit));
                     threadName = metadata ?
-                        `${metadata} | T${getCategoryCount(questionMessage.author.id, message.guild?.id, categoryName, false)}` :
-                        `T | ${fallbackName}`;
+                        buildThreadName(snippet, `T${getCategoryCount(questionMessage.author.id, message.guild?.id, categoryName, false)}`, categoryName) :
+                        buildThreadName(snippet, "T");
                 } else if (interaction.customId === "bulk_thread") {
-                    fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(question)), bulkCharLimit));
                     threadName = metadata ?
-                        `${thisServerSetting?.packet_name ?
-                            abbreviate(thisServerSetting?.packet_name) + "." :
-                            ""
-                        }T${isNumeric(questionNumber) ? questionNumber : ""} | ${categoryName} | ${fallbackName}` :
-                        `T | ${fallbackName}`;
+                        buildThreadName(snippet, `${thisServerSetting?.packet_name ? abbreviate(thisServerSetting?.packet_name) + "." : ""}T${isNumeric(questionNumber) ? questionNumber : ""}`, categoryName) :
+                        buildThreadName(snippet, "T");
                 }
             }
 
             const thread = await questionMessage.startThread({
-                name: threadName.replaceAll(/\s\s+/g, " ").trim(),
+                name: threadName,
                 autoArchiveDuration: 60
             });
 

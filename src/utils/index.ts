@@ -213,6 +213,10 @@ export type EchoSetting = {
     thread_id: string;
 }
 
+// Minimum length for unspoilered text preceding the first spoiler tag to count as a clue
+// (filters out stray question numbers, bullets, etc.)
+const minUnspoiledLeadinLength = 15;
+
 export const getTossupParts = (questionText: string) => {
     const regex = /\|\|([^|]+)\|\|/g;
     const matches = [];
@@ -220,6 +224,15 @@ export const getTossupParts = (questionText: string) => {
 
     while ((match = regex.exec(questionText)) !== null) {
         matches.push(match[1]);
+    }
+
+    // Treat an unspoilered first sentence (before the first spoiler tag) as its own clue
+    const firstSpoiler = questionText.indexOf("||");
+    if (firstSpoiler > 0 && matches.length > 0) {
+        const leadin = removeQuestionNumber(questionText.substring(0, firstSpoiler).trim()).replaceAll(/^[*_\s]+|[*_\s]+$/g, "");
+        if (leadin.length >= minUnspoiledLeadinLength) {
+            matches.unshift(leadin);
+        }
     }
 
     return matches;
@@ -384,62 +397,101 @@ export const updateResultsThreadId = (questionId: string, questionType: Question
 
 export const getResultsThreadId = (questionId: string, questionType: QuestionType) => {
     if (questionType === QuestionType.Bonus) {
-        return (getBonusThreadQuery.get(questionId) as any).thread_id;
+        return (getBonusThreadQuery.get(questionId) as any)?.thread_id;
     } else {
-        return (getTossupThreadQuery.get(questionId) as any).thread_id;
+        return (getTossupThreadQuery.get(questionId) as any)?.thread_id;
     }
+}
+
+// Thread creations currently in flight, keyed by question ID. Two users finishing the same
+// question at once would otherwise both see "no thread yet" and each create one.
+const pendingResultsThreads = new Map<string, Promise<TextThreadChannel>>();
+
+const createResultsThread = async (userProgress: UserProgress, threadName: string, resultsChannel: TextChannel, playtestingChannel: TextChannel): Promise<TextThreadChannel> => {
+    const resultsThread = await resultsChannel.threads.create({
+        name: threadName.replaceAll(/\s\s+/g, " ").trim(),
+        autoArchiveDuration: 60
+    }) as TextThreadChannel;
+
+    // Guard against another process (or a missed in-flight lookup) having created a thread meanwhile
+    const existingThreadId = getResultsThreadId(userProgress.questionId, userProgress.type);
+    if (existingThreadId && existingThreadId !== resultsThread.id) {
+        const existingThread = resultsChannel.threads.cache.get(existingThreadId) as TextThreadChannel | undefined;
+        if (existingThread) {
+            try {
+                await resultsThread.delete();
+            } catch (error) {
+                console.error(`Error deleting duplicate results thread: ${error}`);
+            }
+            return existingThread;
+        }
+    }
+
+    updateResultsThreadId(userProgress.questionId, userProgress.type, resultsThread.id);
+
+    try {
+        await resultsThread.members.add(userProgress.posterId);
+    } catch (error) {
+        console.error(`Error adding member to results thread: ${error}`);
+    }
+
+    const buttonMessage = await playtestingChannel.messages.fetch(userProgress.buttonMessageId);
+    const buttonLabel = "Play " + (!!(userProgress.type === QuestionType.Bonus) ? "Bonus" : "Tossup");
+    if (buttonMessage) {
+        const questionMessage = await playtestingChannel.messages.fetch(userProgress.questionId);
+        if (questionMessage.hasThread || questionMessage.content.includes("!t")) {
+            buttonMessage.edit(buildButtonMessage([
+                { label: buttonLabel, id: "play_question", url: "" },
+                { label: "Results", id: "", url: resultsThread.url }
+            ]));
+        } else {
+            buttonMessage.edit(buildButtonMessage([
+                { label: "Create Discussion Thread", id: "async_thread", url: "" },
+                { label: buttonLabel, id: "play_question", url: "" },
+                { label: "Results", id: "", url: resultsThread.url }
+            ]));
+        }
+    }
+
+    if (userProgress.type === QuestionType.Tossup) {
+        await safeSend(resultsThread, await getTossupSummary(userProgress.questionId, (userProgress as UserTossupProgress).questionParts, (userProgress as UserTossupProgress).answer, userProgress.questionUrl));
+    } else {
+        await safeSend(resultsThread, await getBonusSummary(userProgress.questionId, userProgress.questionUrl));
+    }
+
+    return resultsThread;
 }
 
 export const getResultsThreadAndUpdateSummary = async (userProgress: UserProgress, threadName: string, resultsChannel: TextChannel, playtestingChannel: TextChannel) => {
     const resultsThreadId = getResultsThreadId(userProgress.questionId, userProgress.type);
-    let resultsThread;
+    let resultsThread: TextThreadChannel;
 
     if (!resultsThreadId) {
-        resultsThread = await resultsChannel.threads.create({
-            name: threadName.replaceAll(/\s\s+/g, " ").trim(),
-            autoArchiveDuration: 60
-        });
-        updateResultsThreadId(userProgress.questionId, userProgress.type, resultsThread.id);
-
-        try {
-            await resultsThread.members.add(userProgress.posterId);
-        } catch (error) {
-            console.error(`Error adding member to results thread: ${error}`);
+        let pending = pendingResultsThreads.get(userProgress.questionId);
+        const isCreator = !pending;
+        if (!pending) {
+            pending = createResultsThread(userProgress, threadName, resultsChannel, playtestingChannel)
+                .finally(() => pendingResultsThreads.delete(userProgress.questionId));
+            pendingResultsThreads.set(userProgress.questionId, pending);
         }
+        resultsThread = await pending;
 
-        const buttonMessage = await playtestingChannel.messages.fetch(userProgress.buttonMessageId);
-        const buttonLabel = "Play " + (!!(userProgress.type === QuestionType.Bonus) ? "Bonus" : "Tossup");
-        if (buttonMessage) {
-            const questionMessage = await playtestingChannel.messages.fetch(userProgress.questionId);
-            if (questionMessage.hasThread || questionMessage.content.includes("!t")) {
-                buttonMessage.edit(buildButtonMessage([
-                    { label: buttonLabel, id: "play_question", url: "" },
-                    { label: "Results", id: "", url: resultsThread.url }
-                ]));
-            } else {
-                buttonMessage.edit(buildButtonMessage([
-                    { label: "Create Discussion Thread", id: "async_thread", url: "" },
-                    { label: buttonLabel, id: "play_question", url: "" },
-                    { label: "Results", id: "", url: resultsThread.url }
-                ]));
-            }
-        }
-
-        if (userProgress.type === QuestionType.Tossup) {
-            safeSend(resultsThread, await getTossupSummary(userProgress.questionId, (userProgress as UserTossupProgress).questionParts, (userProgress as UserTossupProgress).answer, userProgress.questionUrl));
-        } else {
-            safeSend(resultsThread, await getBonusSummary(userProgress.questionId, userProgress.questionUrl));
+        // The creator's summary already reflects the DB at creation time; later arrivals
+        // (whose results were saved after that snapshot) need to refresh it.
+        if (isCreator) {
+            return resultsThread;
         }
     } else {
         resultsThread = resultsChannel.threads.cache.find(x => x.id === resultsThreadId) as TextThreadChannel;
-        const resultsMessage = (await resultsThread!.messages.fetch()).find(m => m.content.includes("## Results"));
+    }
 
-        if (resultsMessage) {
-            if (userProgress.type === QuestionType.Tossup)
-                resultsMessage.edit(await getTossupSummary(userProgress.questionId, (userProgress as UserTossupProgress).questionParts, (userProgress as UserTossupProgress).answer, userProgress.questionUrl));
-            else
-                resultsMessage.edit(await getBonusSummary(userProgress.questionId, userProgress.questionUrl));
-        }
+    const resultsMessage = (await resultsThread!.messages.fetch()).find(m => m.content.includes("## Results"));
+
+    if (resultsMessage) {
+        if (userProgress.type === QuestionType.Tossup)
+            resultsMessage.edit(await getTossupSummary(userProgress.questionId, (userProgress as UserTossupProgress).questionParts, (userProgress as UserTossupProgress).answer, userProgress.questionUrl));
+        else
+            resultsMessage.edit(await getBonusSummary(userProgress.questionId, userProgress.questionUrl));
     }
 
     return resultsThread!;
@@ -648,6 +700,29 @@ export const getToFirstIndicator = (clue: string, limit: number = 35) => {
     }
 
     return `${trimmedClue.substring(0, charLimit)}${trail ? "..." : ""}`;
+}
+
+// The first few words of a question, for use as a thread name
+export const getThreadSnippet = (text: string, maxWords: number = 7, maxChars: number = 45) => {
+    let cleaned = cleanThreadName(stripFormatting(removeQuestionNumber(removeSpoilers(text || ""))));
+    // drop common preambles that say nothing about the question
+    cleaned = cleaned.replace(/^(description acceptable|note to (players|moderator|teams)[^.]*)\.?\s*/i, "").trim();
+    const words = cleaned.split(" ").filter(w => w);
+    const kept: string[] = [];
+    for (const word of words) {
+        if (kept.length >= maxWords) break;
+        if (kept.length > 0 && (kept.join(" ").length + 1 + word.length) > maxChars) break;
+        kept.push(word);
+    }
+    let snippet = kept.join(" ").replace(/[,;:(\-–—]+$/, "").trim();
+    if (kept.length < words.length) snippet += "…";
+    return snippet;
+}
+
+// Thread names lead with the question's first few words so they're recognizable in the sidebar
+export const buildThreadName = (snippet: string, ...tags: (string | undefined | null)[]) => {
+    const parts = [snippet, ...tags].map(p => p?.trim()).filter(p => p);
+    return parts.join(" | ").replaceAll(/\s\s+/g, " ").trim().slice(0, 100);
 }
 
 export const removeQuestionNumber = (question: string, get: boolean = false) => {
