@@ -588,7 +588,7 @@ export async function getBonusSummary(questionId: string, questionUrl: string) {
         `**PPB**: ${bonusSummary.ppb.toFixed(2)}\t` +
         `**${points_emojis[0] || "Easy"}** ${formatPercent(bonusSummary.easy_conversion)}\t` +
         `**${points_emojis[1] || "Medium"}** ${formatPercent(bonusSummary.medium_conversion)}\t` +
-        `**${points_emojis[2] || "Hard"} %** ${formatPercent(bonusSummary.hard_conversion)}\n` +
+        `**${points_emojis[2] || "Hard"}** ${formatPercent(bonusSummary.hard_conversion)}\n` +
         `### [Return to Question](${questionUrl})`
 }
 
