@@ -1,6 +1,6 @@
 import { Client, Message, TextChannel } from "discord.js";
 import { safeSend } from "src/bot"
-import { asyncCharLimit } from "src/constants";
+import { ASYNC_CHANNEL, asyncCharLimit } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
 import { powerMarks, superPowerMarks, UserTossupProgress, cleanThreadName, getEmbeddedMessage, getServerChannels, getSilentMessage, getResultsThreadAndUpdateSummary, getToFirstIndicator, removeQuestionNumber, removeSpoilers, saveBuzz, shortenAnswerline, stripFormatting } from "src/utils";
 import { getEmojiList } from "src/utils/emojis";
@@ -69,7 +69,7 @@ export default async function handleTossupPlaytest(message: Message<boolean>, cl
 
         const key = KeySingleton.getInstance().getKey(message);
         const note = message.content.match(/\((.+)\)/);
-        const resultChannel = getServerChannels(userProgress.serverId).find(s => (s.channel_id === userProgress.channelId && s.channel_type === 1));
+        const resultChannel = getServerChannels(userProgress.serverId).find(s => (s.channel_id === userProgress.channelId && s.channel_type === ASYNC_CHANNEL));
         let resultMessage = "";
         let buzzIndex = userProgress.index >= userProgress.questionParts.length ? userProgress.questionParts.length - 1 : userProgress.index;
         let value = 0;

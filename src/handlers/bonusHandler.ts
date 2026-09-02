@@ -1,6 +1,6 @@
 import { Client, Message, TextChannel } from "discord.js";
 import { safeSend } from "src/bot"
-import { asyncCharLimit } from "src/constants";
+import { ASYNC_CHANNEL, asyncCharLimit } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
 import { UserBonusProgress, getEmbeddedMessage, getServerChannels, getSilentMessage, getResultsThreadAndUpdateSummary, getToFirstIndicator, removeQuestionNumber, removeBonusValue, removeSpoilers, saveBonusDirect, shortenAnswerline, cleanThreadName, stripFormatting } from "src/utils";
 import { getEmojiList } from "src/utils/emojis";
@@ -76,7 +76,7 @@ export default async function handleBonusPlaytest(message: Message<boolean>, cli
             await safeSend(message.author, getSilentMessage(partToShow));
         } else {
             const key = KeySingleton.getInstance().getKey(message);
-            const resultChannel = getServerChannels(userProgress.serverId).find(s => (s.channel_id === userProgress.channelId && s.channel_type === 1));
+            const resultChannel = getServerChannels(userProgress.serverId).find(s => (s.channel_id === userProgress.channelId && s.channel_type === ASYNC_CHANNEL));
             let resultMessage = "";
             let points_emoji_names: string[] = [];
             let partMessages: string[] = [];

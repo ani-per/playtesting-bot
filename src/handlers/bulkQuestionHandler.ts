@@ -3,6 +3,7 @@ import { safeSend } from "src/bot";
 import { powerMarks, superPowerMarks, getServerChannels, getBulkQuestionsInPacket, formatPercent, getEchoThreadId, printPacketName, deleteBulkQuestion } from "src/utils";
 import { client } from "src/bot";
 import { getEmojiList } from "src/utils/emojis";
+import { ECHO_CHANNEL } from "src/constants";
 
 type userReact = {
     users: number[],
@@ -16,7 +17,7 @@ export default async function handleTally(serverId: string, packetName: string, 
         let tallyCount = 0;
         var tallyEnd = packetBulkQuestions.length;
         let pluralString = (tallyEnd > 1 || tallyEnd == 0) ? "s" : "";
-        let echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === 3))?.channel_id;
+        let echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === ECHO_CHANNEL))?.channel_id;
         if (echoChannelId) {
             let echoChannel = client.channels.cache.get(echoChannelId) as TextChannel;
             let echoThreadId = getEchoThreadId(serverId, echoChannelId, packetName);

@@ -120,6 +120,8 @@ export const getCategoryRole = (category: string) => {
         categoryRole = "Science";
     } else if (other_names.some(v => category.includes(v))) {
         categoryRole = "Other";
+    } else {
+        // console.log(category);
     }
 
     return categoryRole;

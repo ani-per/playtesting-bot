@@ -21,6 +21,7 @@ import handleCategoryCommand from "./handlers/categoryCommandHandler";
 import handleTally from "./handlers/bulkQuestionHandler";
 import { sleep, QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getBulkQuestions, getBulkQuestionsInPacket, getServerChannels, getServerSettings, saveEchoSetting, deleteEchoSetting, getEchoThreadId, updatePacketName, getEchoSettings, cleanPacketName, printPacketName, deleteBulkPacket } from "./utils";
 import handleAuthorCommand from "./handlers/authorCommandHandler";
+import { ECHO_CHANNEL } from "./constants";
 
 const userProgressMap = new Map<string, UserProgress>();
 
@@ -165,7 +166,7 @@ client.on("messageCreate", async (message) => {
             )
         ) {
             let serverId = message.guild!.id;
-            let echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === 3))?.channel_id;
+            let echoChannelId = getServerChannels(serverId).find(c => (c.channel_type === ECHO_CHANNEL))?.channel_id;
             let currentServerSetting = getServerSettings(serverId).find(ss => ss.server_id == serverId);
             let currentPacket = currentServerSetting?.packet_name || "";
             let splits = message.content.split(" ");

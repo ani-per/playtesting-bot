@@ -1,6 +1,6 @@
 import { Interaction, TextChannel } from "discord.js";
 import { client, safeSend } from "src/bot";
-import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
+import { ASYNC_CHANNEL, asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
 import { buildButtonMessage, QuestionType, UserBonusProgress, UserProgress, UserTossupProgress, getEmbeddedMessage, getTossupParts, getToFirstIndicator, removeBonusValue, removeSpoilers, getCategoryName, getCategoryRole, isNumeric, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, getAuthorName, cleanThreadName, getCategoryCount, getResultsThreadId, getServerChannels, stripFormatting, abbreviate, removeMentions } from "src/utils";
 
 export default async function handleButtonClick(interaction: Interaction, userProgress: Map<string, UserProgress>, setUserProgress: (key: any, value: any) => void) {
@@ -172,7 +172,7 @@ export default async function handleButtonClick(interaction: Interaction, userPr
                     const buttonLabel = "Play " + (!!bonusMatch ? "Bonus" : "Tossup");
                     let resultsThreadId = getResultsThreadId(questionMessage.id, !!bonusMatch ? QuestionType.Bonus : QuestionType.Tossup);
                     if (resultsThreadId) {
-                        const resultChannel = getServerChannels(message.guild!.id).find(s => (s.channel_id === message.channelId && s.channel_type === 1));
+                        const resultChannel = getServerChannels(message.guild!.id).find(s => (s.channel_id === message.channelId && s.channel_type === ASYNC_CHANNEL));
                         const resultsChannel = client.channels.cache.get(resultChannel!.result_channel_id) as TextChannel;
                         const resultsMessage = await resultsChannel.messages.fetch(resultsThreadId);
                         message.edit(buildButtonMessage([

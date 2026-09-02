@@ -1,6 +1,6 @@
 import { Message, Application, TextChannel } from "discord.js";
 import { client, safeSend } from "src/bot";
-import { asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, bulkCharLimit, TOSSUP_REGEX } from "src/constants";
+import { ASYNC_CHANNEL, asyncCharLimit, BONUS_DIFFICULTY_REGEX, BONUS_REGEX, BULK_CHANNEL, bulkCharLimit, ECHO_CHANNEL, TOSSUP_REGEX } from "src/constants";
 import KeySingleton from "src/services/keySingleton";
 import { powerMarks, superPowerMarks, buildButtonMessage, getCategoryCount, getServerChannels, getTossupParts, getToFirstIndicator, removeSpoilers, saveBonus, BonusPart, saveTossup, shortenAnswerline, getCategoryName, getCategoryRole, isNumeric, ServerChannel, removeQuestionNumber, getQuestionNumber, addRoles, getServerSettings, saveBulkQuestion, getEchoThreadId, cleanThreadName, stripFormatting, abbreviate, removeMentions } from "src/utils";
 import { getEmojiList, reactEmojiList } from "src/utils/emojis";
@@ -8,20 +8,22 @@ import { getEmojiList, reactEmojiList } from "src/utils/emojis";
 async function handleThread(msgChannel: ServerChannel, message: Message, isBonus: boolean, question: string, metadata: string, questionNumber: string = "") {
     let thisServerSetting = getServerSettings(message.guild!.id).find(ss => ss.server_id == message.guild!.id);
     let threadName = "Discussion Thread";
-    let fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(question)), msgChannel.channel_type === 2 ? bulkCharLimit : asyncCharLimit));
+    let fallbackName = cleanThreadName(getToFirstIndicator(stripFormatting(removeQuestionNumber(question)), msgChannel.channel_type === BULK_CHANNEL ? bulkCharLimit : asyncCharLimit));
+
     let categoryName = getCategoryName(metadata);
     let categoryRoleName = getCategoryRole(categoryName);
+
     // console.log(`Metadata: ${metadata}`);
     // console.log(`Category Name: ${categoryName}; Category Role Name: ${categoryRoleName}`);
 
-    if (msgChannel.channel_type === 2) {
+    if (msgChannel.channel_type === BULK_CHANNEL) {
         threadName = metadata ?
             `${thisServerSetting?.packet_name ?
                 abbreviate(thisServerSetting?.packet_name) + "." :
                 ""
             }${isBonus ? "B" : "T"}${questionNumber} | ${categoryName} | ${fallbackName}` :
             `${isBonus ? "B" : "T"} | ${fallbackName}`;
-    } else if (msgChannel.channel_type === 1) {
+    } else if (msgChannel.channel_type === ASYNC_CHANNEL) {
         threadName = metadata ?
             `${metadata} | ${isBonus ? "B" : "T"}${getCategoryCount(message.author.id, message.guild?.id, categoryName, isBonus)}` :
             `${isBonus ? "B" : "T"} | ${fallbackName}`;
@@ -34,10 +36,10 @@ async function handleThread(msgChannel: ServerChannel, message: Message, isBonus
 
     if (thread) {
         await addRoles(message, thread, ["Head Editor"], false);
-        if (msgChannel.channel_type === 1) {
+        if (msgChannel.channel_type === ASYNC_CHANNEL) {
             await thread.members.add(message.author);
             await addRoles(message, thread, [categoryRoleName], true);
-        } else if (msgChannel.channel_type === 2) {
+        } else if (msgChannel.channel_type === BULK_CHANNEL) {
             await addRoles(message, thread, ["Playtester", categoryRoleName], true);
         }
     }
@@ -109,15 +111,27 @@ export default async function handleNewQuestion(message: Message<boolean>) {
             threadQuestionText = leadin;
             threadMetadata = removeSpoilers(metadata);
             questionNumber = getQuestionNumber(leadin);
+            // console.log(leadin);
+            // console.log(part1);
+            // console.log(answer1);
+            // console.log(part2);
+            // console.log(answer2);
+            // console.log(part3);
+            // console.log(answer3);
+            // console.log(metadata);
+            // console.log(threadMetadata);
+            // console.log(difficultyPart1);
+            // console.log(difficultyPart2);
+            // console.log(difficultyPart3);
 
             difficulties = [
                 { part: 1, answer: shortenAnswerline(answer1), difficulty: difficultyPart1 || difficulty1Match[1] || "e" },
                 { part: 2, answer: shortenAnswerline(answer2), difficulty: difficultyPart2 || difficulty2Match[1] || "m" },
                 { part: 3, answer: shortenAnswerline(answer3), difficulty: difficultyPart3 || difficulty3Match[1] || "h" },
             ];
-            if (msgChannel.channel_type === 2) {
+            if (msgChannel.channel_type === BULK_CHANNEL) {
                 await handleReacts(message, !!bonusMatch, difficulties);
-            } else if (msgChannel.channel_type === 1) {
+            } else if (msgChannel.channel_type === ASYNC_CHANNEL) {
                 saveBonus(message.id, message.guildId!, message.author.id, getCategoryName(threadMetadata), difficulties, key);
             }
             answersEcho.push(shortenAnswerline(answer1));
@@ -135,25 +149,25 @@ export default async function handleNewQuestion(message: Message<boolean>) {
             questionNumber = getQuestionNumber(question);
 
             // if a tossup was sent that has 2 or fewer spoiler tagged sections, assume that it's not meant to be played
-            if (msgChannel.channel_type === 1 && tossupParts.length <= 2) {
+            if (msgChannel.channel_type === ASYNC_CHANNEL && tossupParts.length <= 2) {
                 safeSend(message, "The pasted tossup doesn't seem to be properly spoiler-tagged. Try again using the [paster dingus](https://minkowski.space/quizbowl/paster/) to auto-format the tossup.", "reply");
                 return;
             }
 
-            if (msgChannel.channel_type === 2) {
+            if (msgChannel.channel_type === BULK_CHANNEL) {
                 await handleReacts(message, !!bonusMatch, difficulties);
-            } else if (msgChannel.channel_type === 1) {
+            } else if (msgChannel.channel_type === ASYNC_CHANNEL) {
                 saveTossup(message.id, message.guildId!, message.author.id, questionLength, getCategoryName(threadMetadata), shortenAnswerline(answer), key);
             }
             answersEcho.push(shortenAnswerline(answer));
         }
 
-        if (msgChannel.channel_type !== 3) {
-            if (msgChannel.channel_type === 2) {
+        if (msgChannel.channel_type !== ECHO_CHANNEL) {
+            if (msgChannel.channel_type === BULK_CHANNEL) {
                 let serverId = message.guild!.id;
                 let thisServerSetting = getServerSettings(serverId).find(ss => ss.server_id == serverId);
                 const packetName = thisServerSetting?.packet_name || "";
-                const echoChannelId = playtestingChannels.find(c => (c.channel_type === 3))?.channel_id;
+                const echoChannelId = playtestingChannels.find(c => (c.channel_type === ECHO_CHANNEL))?.channel_id;
                 if (echoChannelId) {
                     const echoThreadId = getEchoThreadId(serverId, echoChannelId, packetName);
                     let answer_emoji = (getEmojiList(["answer"]))[0];
@@ -198,7 +212,7 @@ export default async function handleNewQuestion(message: Message<boolean>) {
                         ]), "reply");
                     }
                 }
-            } else if (msgChannel.channel_type === 1) {
+            } else if (msgChannel.channel_type === ASYNC_CHANNEL) {
                 const buttonLabel = "Play " + (!!bonusMatch ? "Bonus" : "Tossup");
                 if (message.content.includes("!t")) {
                     safeSend(message, buildButtonMessage([
